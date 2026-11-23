@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>悟空真经 · 二板排板终端</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/style.css?v=__APP_VER__">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="seal">悟</div>
+    <div>
+      <h1>悟空真经</h1>
+      <p class="sub">E5:B1 · 二板排板 · 只做一条策略</p>
+    </div>
+  </div>
+  <nav class="nav">
+    <a href="#today">今日</a>
+    <a href="#book">账本</a>
+    <a href="#backtest">回放</a>
+    <a href="#cases">龟兔</a>
+  </nav>
+  <div class="top-right">
+    <span class="pill" id="dayPill">--</span>
+    <span class="pill" id="marketPill">--</span>
+    <span class="pill dot" id="healthPill">数据</span>
+    <button id="refreshBtn" type="button">刷新</button>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="hero-main">
+      <p class="eyebrow">今日开仓状态</p>
+      <h2 id="heroTitle">载入中…</h2>
+      <p id="heroReason" class="muted">正在读取涨停池留档与真实日线。</p>
+      <div class="rules" id="rules"></div>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><span>今日委托</span><strong id="kToday">--</strong><small>二板排板单</small></div>
+      <div class="kpi"><span>已成</span><strong id="kFilled">--</strong><small>Q037 撮合</small></div>
+      <div class="kpi"><span>持仓</span><strong id="kHolding">--</strong><small>跨日</small></div>
+      <div class="kpi"><span>龟兔配对</span><strong id="kPairs">--</strong><small>同题材同身位</small></div>
+    </div>
+  </section>
+
+  <div class="notice hidden" id="notice"></div>
+
+  <section id="today" class="panel">
+    <div class="panel-head">
+      <h2>今日二板 · 排板委托</h2>
+      <p class="muted" id="todayMeta">--</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>代码 / 名称</th><th>题材</th><th>龟兔角色</th><th>挂单时刻</th>
+          <th class="num">委托价</th><th class="num">数量</th><th>状态</th><th>成交/原因</th>
+        </tr></thead>
+        <tbody id="todayBody"><tr><td colspan="8" class="empty">载入中…</td></tr></tbody>
+      </table>
+    </div>
+    <div class="grid-2" id="pairsWrap"></div>
+  </section>
+
+  <section id="book" class="panel">
+    <div class="panel-head">
+      <h2>B1 实时模拟账本</h2>
+      <p class="muted">买点：二板封板瞬间挂涨停价排队；卖点：首个断板日收盘卖出。只写本地账本，不下单。</p>
+    </div>
+    <div class="summary-row" id="costSummary"></div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr>
+          <th>代码 / 名称</th><th>买入日</th><th>状态</th><th class="num">买入价</th>
+          <th class="num">卖出日</th><th class="num">卖出价</th><th class="num">毛收益</th><th class="num">净收益</th>
+        </tr></thead>
+        <tbody id="posBody"><tr><td colspan="8" class="empty">载入中…</td></tr></tbody>
+      </table>
+    </div>
+    <h3 class="sub-head">成本三口径（裁定⑥：暂不统一）</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>成本口径</th><th class="num">样本</th><th class="num">胜率</th><th class="num">均值净</th><th class="num">中位净</th></tr></thead>
+        <tbody id="costBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section id="backtest" class="panel">
+    <div class="panel-head">
+      <h2>二板排板 · 历史回放</h2>
+      <p class="muted" id="btMeta">--</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>口径</th><th class="num">样本</th><th class="num">胜率</th><th class="num">均值净</th><th class="num">中位净</th><th class="num">10% 等权累计</th></tr></thead>
+        <tbody id="btStats"></tbody>
+      </table>
+    </div>
+    <h3 class="sub-head">最近 20 个二板信号</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>信号日</th><th>代码 / 名称</th><th>题材</th><th class="num">二板高度</th><th class="num">持有</th><th class="num">最高连板</th><th class="num">净收益</th></tr></thead>
+        <tbody id="btLatest"></tbody>
+      </table>
+    </div>
+    <details class="caveats"><summary>回放口径与边界（必读）</summary><ul id="btCaveats"></ul></details>
+  </section>
+
+  <section id="cases" class="panel">
+    <div class="panel-head">
+      <h2>悟空真经 · 龟兔案例库</h2>
+      <p class="muted" id="caseMeta">--</p>
+    </div>
+    <div class="thesis" id="thesis"></div>
+    <h3 class="sub-head">案例配对（兔子=一字 / 乌龟=换手）</h3>
+    <div class="grid-2" id="caseGroups"></div>
+    <h3 class="sub-head">历史高标周期</h3>
+    <div class="chips" id="bullPeriods"></div>
+    <details class="caveats"><summary>案例口径与边界（必读）</summary><ul id="caseCaveats"></ul></details>
+  </section>
+
+  <footer>
+    <p>悟空真经 · 二板排板终端 ｜ 数据只读真实落盘：涨停池留档 + 真实日线 ｜ 不构成投资建议 ｜ 不向任何账户发送交易指令</p>
+    <p class="muted" id="footerMeta"></p>
+  </footer>
+</main>
+
+<script src="/app.js?v=__APP_VER__"></script>
+</body>
+</html>

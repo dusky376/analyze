@@ -1,0 +1,15 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# 运行时产物
+data/tmp/
+data/_pt/
+data/server.log
+data/server.err.log
+data/shot_*.png
+*.bak
+*.bak-*
+tools/daemon.log
