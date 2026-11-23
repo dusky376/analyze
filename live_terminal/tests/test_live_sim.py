@@ -457,3 +457,44 @@ def test_queue_never_opened_means_unfilled(monkeypatch) -> None:
     r = fv.simulate_fill("20261113", "000001", "t1", frames)
     assert r["status"] == "queued_unfilled"
     assert r["detail"].startswith("全天未开板")
+
+
+# ---------------------------------------------------------------------------
+# 条件 C：昨日涨停溢价（2026-11-23 用户裁定：用真实日线算回来）
+# ---------------------------------------------------------------------------
+
+def test_emotion_gate_premium_is_computed_from_real_panel() -> None:
+    """条件 C 不再是恒 None：昨日涨停股今日平均涨幅必须算出来。"""
+    g = live_sim.emotion_gate("20261118")
+    assert g.get("available") is True
+    assert g.get("premium") is not None, "条件 C 溢价必须由真实日线算出"
+    assert isinstance(g["premium"], (int, float))
+    assert g.get("n_premium", 0) > 0
+
+
+def test_emotion_gate_premium_matches_manual_recompute() -> None:
+    """抽样核对：溢价 = 昨日涨停股今日涨跌幅的算术平均。"""
+    from backend import feature_engine
+    import polars as pl
+
+    day, prev = "2026-11-18", "2026-11-17"
+    p = live_sim.feeds.build_panel() if hasattr(live_sim, "feeds") else None
+    if p is None:
+        from backend import feeds
+        p = feeds.build_panel()
+    vals = []
+    for (code,), grp in p.group_by("ts_code", maintain_order=True):
+        ds = [str(x) for x in grp["trade_date"].to_list()]
+        if prev not in ds or day not in ds:
+            continue
+        jp, jt = ds.index(prev), ds.index(day)
+        if jt < 1:
+            continue
+        c = grp["close"].to_numpy().astype(float)
+        _, st = feature_engine.zt_flags(code, c)
+        if int(st[jp]) < 1:
+            continue
+        vals.append(float(c[jt] / c[jt - 1] - 1.0) * 100.0)
+    assert vals, "样本为空，无法核对"
+    g = live_sim.emotion_gate("20261118")
+    assert g["premium"] == pytest.approx(sum(vals) / len(vals), abs=0.01)

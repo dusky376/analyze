@@ -287,13 +287,18 @@ def collect_two_board(frames: list[dict[str, Any]]) -> tuple[dict[str, dict[str,
     return out, notes
 
 
-def build_order(day: str, code: str, g: dict[str, Any]) -> dict[str, Any]:
+def build_order(day: str, code: str, g: dict[str, Any], *,
+                size_factor: float = 1.0) -> dict[str, Any]:
     """生成**挂单**（不判成交）。
 
     2026-11-16 修复未来函数：旧实现用 `g["broken_max"]`（全天最大开板次数）
     判定能否成交 —— 那是收盘后才知道的数据，等于挂单时就未卜先知。
     现在这里只产生「挂单」，成交由 :func:`advance_fills` 逐帧推进决定，
     每次只用当前帧及之前的信息。
+
+    Args:
+        size_factor: 仓位系数（冰点小仓试错，见 `ice_gate.size_factor`）。
+                     只缩放单笔买入金额，不改变选股、成交判定与买卖点。
     """
     first = g["first"]
     b0 = first.get("broken")
@@ -348,7 +353,10 @@ def build_order(day: str, code: str, g: dict[str, Any]) -> dict[str, Any]:
         "seal_fund": g["last"].get("seal_fund"),
     }
     # 2026-11-17：把价格换算成「数量 × 成交额」，成本模型才能计入最低 5 元佣金。
-    qty, notional = position_size(first.get("price"))
+    # 2026-11-23：冰点时按 size_factor 缩放单笔金额（小仓试错，不改买卖点）。
+    factor = max(0.0, min(1.0, float(size_factor or 1.0)))
+    size_yuan = POSITION_SIZE_YUAN * factor
+    qty, notional = position_size(first.get("price"), size_yuan=size_yuan)
     return {
         "id": f"{day}|{code}|B1",
         "day": day, "strategy": STRATEGY,
@@ -357,7 +365,9 @@ def build_order(day: str, code: str, g: dict[str, Any]) -> dict[str, Any]:
         "entry_date": day, "entry_price": first.get("price"),
         # 数量与成交额：让 settle 的成本口径能计入最低 5 元佣金
         "qty": qty, "notional": notional,
-        "notional_basis": "单笔上限 10 万元：qty=floor(100000/(价×100))×100",
+        "size_factor": factor,
+        "notional_basis": (f"单笔上限 {size_yuan:,.0f} 元（冰点系数 {factor:.2f}）："
+                           f"qty=floor({size_yuan:,.0f}/(价×100))×100"),
         "entry_frame_ts": g["frame_ts"],
         "entry_rule": ENTRY_RULE, "exit_rule": EXIT_RULE,
         "queue": q,
@@ -1109,23 +1119,42 @@ def emotion_gate(day: str) -> dict[str, Any]:
         n = len(hi_ret)
         avg = sum(hi_ret) / n
         dt_share = sum(1 for r in hi_ret if r <= -9.5) / n
+
+        # C：昨日涨停溢价 = 昨日所有涨停股，今日平均涨跌幅。
+        # 2026-11-23 用户裁定：用真实日线算回来（此前字段恒为 None）。
+        # 口径：昨日涨停（含首板与连板）→ 今日收盘相对昨收的平均涨幅。
+        prem_vals: list[float] = []
+        for (code,), g in p.group_by("ts_code", maintain_order=True):
+            ds = [str(x) for x in g["trade_date"].to_list()]
+            if prev not in ds or today not in ds:
+                continue
+            jp, jt = ds.index(prev), ds.index(today)
+            if jt < 1:
+                continue
+            c = g["close"].to_numpy().astype(float)
+            _, st = feature_engine.zt_flags(code, c)
+            if int(st[jp]) < 1:                  # 昨日未涨停 → 不进溢价样本
+                continue
+            r = float(c[jt] / c[jt - 1] - 1.0) * 100.0
+            if r == r:
+                prem_vals.append(r)
+        premium = round(sum(prem_vals) / len(prem_vals), 2) if prem_vals else None
         out.update({
             "available": True,
             "n_high": n,
             "avg_ret": round(avg, 2),
             "limit_down_share": round(dt_share, 3),
             "worst": round(min(hi_ret), 2),
+            "premium": premium,
+            "n_premium": len(prem_vals),
         })
-        # C：昨日涨停溢价（精简版不再读取情绪周期模块，保留字段但留空）
-        out["premium"] = None
         reasons = []
         if avg <= -3.0:
             reasons.append(f"昨日高标今日均涨 {avg:+.2f}% ≤ -3%")
         if dt_share >= 0.40:
             reasons.append(f"昨日高标今日跌停占比 {dt_share:.0%} ≥ 40%")
-        prem_v = out.get("premium")
-        if prem_v is not None and prem_v <= -1.5:
-            reasons.append(f"昨日涨停溢价 {prem_v:+.2f}% ≤ -1.5%")
+        if premium is not None and premium <= -1.5:
+            reasons.append(f"昨日涨停溢价 {premium:+.2f}% ≤ -1.5%")
         out["blocked"] = bool(reasons)
         out["reasons"] = reasons
         out["verdict"] = ("情绪不佳 → 停手/控仓" if reasons else "情绪可做")
@@ -1145,6 +1174,14 @@ def sync(day: str | None = None, *, frames: list[dict[str, Any]] | None = None,
         # 2026-11-16 用户裁定：改为「题材内有一字板 → 买该题材其他二板」。
         # 旧实现 collect_two_board 是「全部二板都买」，方向与策略原意不符。
         gate = emotion_gate(day)
+        # 市场级冰点闸门（用户 2026-11-23 裁定）：冰点不空仓，按系数缩减仓位。
+        try:
+            from backend import ice_gate
+            ice = ice_gate.assess(day)
+        except Exception as exc:  # noqa: BLE001 - 冰点不可用不阻塞主流程
+            ice = {"available": False, "is_ice": False, "size_factor": 1.0,
+                   "level": None, "reason": f"{type(exc).__name__}: {exc}"}
+        size_factor = float(ice.get("size_factor") or 1.0)
         if gate.get("available") and gate.get("blocked"):
             groups, collect_notes = {}, [
                 "情绪闸门拦截：" + "；".join(gate.get("reasons") or [])
@@ -1158,6 +1195,14 @@ def sync(day: str | None = None, *, frames: list[dict[str, Any]] | None = None,
                     f"{gate.get('limit_down_share'):.0%}"
                     + (f"、溢价 {gate.get('premium'):+.2f}%"
                        if gate.get("premium") is not None else ""))
+        if ice.get("available") and ice.get("is_ice"):
+            collect_notes.append(
+                f"市场冰点 L={ice.get('level')}（" + "；".join(ice.get("reasons") or [])
+                + f"）→ 小仓试错，仓位系数 {size_factor:.2f}"
+                "（用户 2026-11-23 裁定：冰点不绝对空仓）")
+        elif ice.get("available"):
+            collect_notes.append(
+                f"市场非冰点 L={ice.get('level')} → 正常仓位（系数 {size_factor:.2f}）")
         notes.extend(collect_notes)
         if not fr:
             notes.append(f"{day} 无涨停池留档帧；本日不产生任何委托单（不补数、不猜测）。")
@@ -1166,7 +1211,7 @@ def sync(day: str | None = None, *, frames: list[dict[str, Any]] | None = None,
         for code, g in groups.items():
             oid = f"{day}|{code}|B1"
             cur = state["orders"].get(oid)
-            new = build_order(day, code, g)
+            new = build_order(day, code, g, size_factor=size_factor)
             if cur is None:
                 state["orders"][oid] = new
                 cur = new
@@ -1264,6 +1309,46 @@ def sync(day: str | None = None, *, frames: list[dict[str, Any]] | None = None,
         return out
 
 
+def _ice_payload(day: str) -> dict[str, Any]:
+    """市场级冰点快照（只读展示；不改买卖点）。失败降级为空，不阻塞 payload。"""
+    try:
+        from backend import ice_gate
+        r = ice_gate.assess(day)
+        return {
+            "available": bool(r.get("available")),
+            "level": r.get("level"),
+            "is_ice": bool(r.get("is_ice")),
+            "size_factor": r.get("size_factor"),
+            "verdict": r.get("verdict"),
+            "reasons": r.get("reasons") or [],
+            "metrics": r.get("metrics"),
+            "dim_levels": r.get("dim_levels"),
+            "caveat": r.get("caveat"),
+        }
+    except Exception as exc:  # noqa: BLE001
+        return {"available": False, "reason": f"{type(exc).__name__}: {exc}"}
+
+
+def _emotion_payload(day: str) -> dict[str, Any]:
+    """个股级情绪闸门快照（含条件 C 溢价）。失败降级为空。"""
+    try:
+        g = emotion_gate(day)
+        return {
+            "available": bool(g.get("available")),
+            "blocked": bool(g.get("blocked")),
+            "verdict": g.get("verdict"),
+            "n_high": g.get("n_high"),
+            "avg_ret": g.get("avg_ret"),
+            "limit_down_share": g.get("limit_down_share"),
+            "premium": g.get("premium"),
+            "n_premium": g.get("n_premium"),
+            "reasons": g.get("reasons") or [],
+            "reason": g.get("reason"),
+        }
+    except Exception as exc:  # noqa: BLE001
+        return {"available": False, "reason": f"{type(exc).__name__}: {exc}"}
+
+
 def _payload(state: dict[str, Any], day: str, frames: list[dict[str, Any]],
              notes: list[str]) -> dict[str, Any]:
     orders = list(state["orders"].values())
@@ -1338,6 +1423,8 @@ def _payload(state: dict[str, Any], day: str, frames: list[dict[str, Any]],
         "cost_label": COST_LABEL,
         "cost_rate": round(costs.DEFAULT.round_trip_rate(), 6),
         "cost_status": "用户 2026-11-23 裁定：万0.84免五，单一口径；历史记录不重算",
+        "ice": _ice_payload(day),
+        "emotion": _emotion_payload(day),
         "core_definition": guitu_roles.CORE_DEFINITION,
         "guitu_note": guitu_roles.PROXY_NOTE,
         "by_role": guitu_roles.summarize_roles(orders, trades),

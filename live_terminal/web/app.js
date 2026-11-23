@@ -145,6 +145,7 @@ function renderLiveSim(d) {
   renderPairs(d.pairs, day);
   renderPositions(d);
   renderCost(d);
+  renderEmotion(d.ice, d.emotion);
   $("#footerMeta").textContent =
     `账本生成 ${d.generated_at || "—"} · ${d.strategy || ""} · 快照源 ${d.source || "sync"}`;
 }
@@ -383,6 +384,68 @@ function renderEnvGroups(groups, totalN) {
     </div>`;
   }).join("") + `<p class="muted">共 ${fmtInt(totalN)} 笔；分组为描述性切分，未做显著性检验，分组越多偶然越大。</p>`;
 }
+
+/* ------------------------------------------------------- emotion / ice */
+function renderEmotion(ice, emo) {
+  // 市场级冰点：决定仓位，不决定是否空仓（用户裁定：小仓试错）
+  const iceBox = $("#iceBox");
+  if (iceBox) {
+    if (!ice || !ice.available) {
+      iceBox.innerHTML = `<h4>市场冰点 · 仓位档</h4>
+        <div class="empty-card">${esc((ice && ice.reason) || "冰点数据不可用")}</div>`;
+    } else {
+      const lv = ice.level || "—";
+      const factor = has(ice.size_factor) ? Number(ice.size_factor) : null;
+      const tone = ice.is_ice ? "down" : "up";
+      const m = ice.metrics || {};
+      const dims = ice.dim_levels || {};
+      const dimText = Object.entries(dims)
+        .map(([k, v]) => `${esc(ICE_DIM_CN[k] || k)}=${esc(v || "—")}`).join(" · ");
+      iceBox.innerHTML = `<h4>市场冰点 · 仓位档</h4>
+        <div class="status">
+          <b class="${tone}">${esc(ice.verdict || "—")}</b>
+          <span class="tag ${ice.is_ice ? "rabbit" : "turtle"}">${esc(lv)}</span>
+          ${factor !== null ? `<span class="tag unknown">仓位 ×${factor.toFixed(2)}</span>` : ""}
+        </div>
+        <p class="muted">跌停 ${esc(fmtInt(m.limit_down_n))} · 涨停 ${esc(fmtInt(m.limit_up_n))}
+          · 下跌占比 ${esc(has(m.down_share) ? (Number(m.down_share) * 100).toFixed(1) + "%" : "—")}
+          · 高标破板 ${esc(fmtInt(m.broken_hi_n))}</p>
+        <p class="muted">${dimText}</p>
+        ${(ice.reasons || []).length ? `<p class="muted">判据：${(ice.reasons || []).map(esc).join("；")}</p>` : ""}
+        <p class="muted" style="opacity:.75">${esc(ice.caveat || "")}</p>`;
+    }
+  }
+
+  // 个股级情绪：决定能否打板
+  const emoBox = $("#emotionBox");
+  if (emoBox) {
+    if (!emo || !emo.available) {
+      emoBox.innerHTML = `<h4>个股情绪 · 打板闸门</h4>
+        <div class="empty-card">${esc((emo && emo.reason) || "情绪数据不可用")}</div>`;
+    } else {
+      const blocked = emo.blocked === true;
+      emoBox.innerHTML = `<h4>个股情绪 · 打板闸门</h4>
+        <div class="status">
+          <b class="${blocked ? "down" : "up"}">${esc(emo.verdict || "—")}</b>
+        </div>
+        <p class="muted">昨日高标 ${esc(fmtInt(emo.n_high))} 只 · 今日均涨 ${fmtPct(
+          has(emo.avg_ret) ? Number(emo.avg_ret) / 100 : null)}
+          · 跌停占比 ${esc(has(emo.limit_down_share)
+            ? (Number(emo.limit_down_share) * 100).toFixed(0) + "%" : "—")}</p>
+        <p class="muted">条件C 昨日涨停溢价 ${fmtPct(
+          has(emo.premium) ? Number(emo.premium) / 100 : null)}
+          ${has(emo.n_premium) ? `（${esc(fmtInt(emo.n_premium))} 只样本）` : ""}</p>
+        ${(emo.reasons || []).length ? `<p class="muted">触发：${(emo.reasons || []).map(esc).join("；")}</p>` : ""}`;
+    }
+  }
+}
+
+const ICE_DIM_CN = {
+  down_share: "下跌占比",
+  limit_down_n: "跌停数",
+  dt_ratio: "跌停/涨停",
+  broken_hi_n: "高标破板",
+};
 
 /* ------------------------------------------------------------------- load */
 async function loadAll(manual = false) {
