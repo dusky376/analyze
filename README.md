@@ -63,7 +63,7 @@ start.bat
 | `GET /` | 单页终端（`index.html`，4 区块：今日/账本/回放/龟兔） |
 | `GET /favicon.svg` | 图标 |
 | `GET /api/version` | 进程 build / 磁盘 build / stale |
-| `GET /api/health` | 面板、留档、采集器、交易时钟状态 |
+| `GET /api/health` | 面板、留档、采集器、交易时钟状态 + `archive_check` 数据完整性自检（缺留档显式报警） |
 | `GET /api/live-sim` | 今日二板委托、持仓、结算、万0.84免五单一成本 |
 | `GET /api/guitu` | 历史回放 + 今日实时排板队列 |
 | `GET /api/guitu-cases` | 龟兔案例库 / 今日快照 / 命题检验（只读） |

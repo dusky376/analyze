@@ -36,8 +36,8 @@ from typing import Any, Callable
 import polars as pl
 from flask import Flask, Response, jsonify, request, send_from_directory
 
-from backend import (feeds, guitu_backtest, guitu_cases, leader_ladder, live_sim,
-                     market_clock, queue_match, recorder)
+from backend import (data_health, feeds, guitu_backtest, guitu_cases, leader_ladder,
+                     live_sim, market_clock, queue_match, recorder)
 from backend.json_safe import sanitize
 
 ROOT = Path(__file__).resolve().parent
@@ -183,6 +183,7 @@ def api_health() -> Response:
                           .isoformat(timespec="seconds") if panel.is_file() else None),
             },
             "live_archive": {"days": len(live_days), "latest": live_days[-1] if live_days else None},
+            "archive_check": data_health.check(),
             "recorder": rec,
             "data_policy": "只读真实落盘：涨停池留档 + 真实日线；不合成、不插值、不补数。",
         }

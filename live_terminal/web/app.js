@@ -86,12 +86,20 @@ function renderHealth(h) {
   const ok = h && h.ok;
   const last = h?.panel?.last_trade_date || "—";
   const live = h?.live_archive?.latest || "—";
-  setText("#healthPill", ok ? "数据正常" : "数据异常", ok ? "ok" : "bad");
-  $("#healthPill").title = `panel_last=${last} · live_latest=${live} · recorder=${
-    h?.recorder?.running ? "running" : "stopped"}`;
+  const ac = h?.archive_check || {};
+  // 留档自检：missing / stale 时降级为预警，避免把"数据没到"误读为"策略没信号"。
+  const archiveBad = ac.status === "missing" || ac.status === "stale";
+  setText("#healthPill",
+    !ok ? "数据异常" : archiveBad ? "留档缺失" : "数据正常",
+    !ok ? "bad" : archiveBad ? "warn" : "ok");
+  $("#healthPill").title = ac.message || (
+    `panel_last=${last} · live_latest=${live} · recorder=${
+      h?.recorder?.running ? "running" : "stopped"}`);
   const market = h?.market?.reason || "";
   setText("#marketPill", market ? `A股 ${market}` : "A股 —");
   $("#dayPill").textContent = fmtDay(h?.day);
+  // 顶部 notice 只在留档异常时提示；不开仓的原因由 renderLiveSim 负责。
+  if (archiveBad) notice(`留档自检：${ac.message}`);
 }
 
 /* --------------------------------------------------------------- live sim */
@@ -141,10 +149,37 @@ function renderLiveSim(d) {
     `账本生成 ${d.generated_at || "—"} · ${d.strategy || ""} · 快照源 ${d.source || "sync"}`;
 }
 
+// 排板成交率诊断：从 queue_sim 提取"封单消耗比"连续值（只读展示，不参与判定）。
+// ≥RATIO_FILL(后端≈1) 表示排到；数值越高越接近成交。取各轮最大值 + 全天净消耗比。
+function fillRatio(o) {
+  const q = o && o.queue_sim;
+  if (!q) return null;
+  const rounds = q.rounds || [];
+  let best = null;
+  for (const r of rounds) {
+    if (has(r.ratio) && Number.isFinite(Number(r.ratio))) {
+      const v = Number(r.ratio);
+      best = best === null ? v : Math.max(best, v);
+    }
+  }
+  // 全天未开板但有净消耗：seal_consumed / seal_fund_at_entry
+  if (best === null && has(q.seal_consumed_yi) && has(q.seal_fund_at_entry_yi)
+      && Number(q.seal_fund_at_entry_yi) > 0) {
+    best = Number(q.seal_consumed_yi) / Number(q.seal_fund_at_entry_yi);
+  }
+  return best;
+}
+function ratioCell(o) {
+  const r = fillRatio(o);
+  if (r === null) return `<td class="num muted">—</td>`;
+  const cls2 = r >= 1 ? "up" : r >= 0.5 ? "flat" : "down";
+  return `<td class="num ${cls2}" title="封单消耗比 ${r.toFixed(2)}；≥1 排到">${r.toFixed(2)}</td>`;
+}
+
 function renderTodayOrders(rows, day) {
   const body = $("#todayBody");
   if (!rows.length) {
-    body.innerHTML = `<tr><td colspan="8" class="empty">${esc(fmtDay(day))} 无排板委托 —— 当日策略未开仓，不回退展示历史单。</td></tr>`;
+    body.innerHTML = `<tr><td colspan="9" class="empty">${esc(fmtDay(day))} 无排板委托 —— 当日策略未开仓，不回退展示历史单。</td></tr>`;
     return;
   }
   body.innerHTML = rows.map((o) => {
@@ -157,6 +192,7 @@ function renderTodayOrders(rows, day) {
       <td>${esc(fmtTs(o.entry_frame_ts))}</td>
       <td class="num">${fmtNum(o.entry_price)}</td>
       <td class="num">${fmtInt(o.qty)}</td>
+      ${ratioCell(o)}
       <td>${statusTag(o.status)}</td>
       <td class="muted">${esc(reason)}</td>
     </tr>`;
