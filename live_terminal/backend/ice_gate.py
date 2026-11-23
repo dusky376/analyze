@@ -268,8 +268,9 @@ def history(panel: pl.DataFrame, *, days: int = 250) -> list[dict[str, Any]]:
 
 def assess(day: str, *, panel: pl.DataFrame | None = None,
            bounds: dict[str, Any] | None = None,
-           roll_bounds: bool = True) -> dict[str, Any]:
-    """评估某日冰点状态 + 仓位系数（只读，不写任何文件）。
+           roll_bounds: bool = True,
+           persist: bool = False) -> dict[str, Any]:
+    """评估某日冰点状态 + 仓位系数。
 
     Args:
         day: 'YYYYMMDD' 或 'YYYY-MM-DD'
@@ -277,6 +278,8 @@ def assess(day: str, *, panel: pl.DataFrame | None = None,
         bounds: 可注入分位边界；None 时按 roll_bounds 决定
         roll_bounds: True = 用最近 250 日现算分位（跟随市场）；
                      False = 用 DEFAULT_BOUNDS 快照（便于复现历史）
+        persist: True 时把本次判定写入样本库（用户裁定 B：命中即新增样本）。
+                 默认 False —— 纯查询不产生副作用，避免只读调用污染样本库。
     """
     d = _norm(day)
     p = panel if panel is not None else feeds.build_panel()
@@ -301,13 +304,39 @@ def assess(day: str, *, panel: pl.DataFrame | None = None,
     ice = is_ice(rec, dims)
     factor = size_factor(s, ice)
     reasons = []
+    itype = None
     if ice:
         n_ge3 = sum(1 for v in dims.values()
                     if v in LEVEL_ORDER and LEVEL_ORDER.index(v) >= 3)
-        if s and LEVEL_ORDER.index(s) >= 4 and n_ge3 >= 2:
+        by_multi = bool(s and LEVEL_ORDER.index(s) >= 4 and n_ge3 >= 2)
+        by_abs = (_finite(rec.get("limit_down_n")) or 0) >= ICE_LIMIT_DOWN_ABS
+        itype = ("both" if (by_multi and by_abs)
+                 else "multi_dim" if by_multi
+                 else "abs_limit_down" if by_abs else None)
+        if by_multi:
             reasons.append(f"多维确认：S={s} 且 {n_ge3} 维≥L3")
-        if (_finite(rec.get("limit_down_n")) or 0) >= ICE_LIMIT_DOWN_ABS:
+        if by_abs:
             reasons.append(f"跌停 {rec['limit_down_n']} 家 ≥ {ICE_LIMIT_DOWN_ABS}")
+
+    # 用户裁定 B：命中即新增样本并参与校准（persist=True 时才写）
+    sample_info: dict[str, Any] = {"persisted": False}
+    if persist:
+        try:
+            from backend import ice_samples
+            st = ice_samples.load()
+            is_new = ice_samples.record_day(
+                st, day=d, metrics=rec, dims=dims, level=s, is_ice=ice,
+                size_factor=factor, itype=itype, source="auto")
+            ice_samples.save(st)
+            sample_info = {
+                "persisted": True,
+                "new_sample": is_new,
+                "auto_samples_n": len(st.get("auto_samples") or {}),
+                "history_n": len(st.get("history") or {}),
+            }
+        except Exception as exc:  # noqa: BLE001 - 写库失败不阻塞判定
+            sample_info = {"persisted": False,
+                           "error": f"{type(exc).__name__}: {exc}"}
 
     return {
         "available": True,
@@ -317,11 +346,13 @@ def assess(day: str, *, panel: pl.DataFrame | None = None,
         "dim_levels": dims,
         "level": s,
         "is_ice": ice,
+        "ice_type": itype,
         "size_factor": factor,
         "reasons": reasons,
         "verdict": ("冰点 → 小仓试错" if ice else "非冰点 → 正常仓位"),
         "bounds_source": ("rolling_250d" if roll_bounds else "snapshot"),
         "bounds": bounds,
+        "sample": sample_info,
         "caveat": ("分位边界随市场滚动现算；备份切分验证显示冰点形态会漂移"
                    "（OOS 种子命中 0/17），不得把历史阈值当永久真理。"),
     }
@@ -332,7 +363,9 @@ if __name__ == "__main__":
     import sys
     from datetime import datetime as _dt
 
-    day = sys.argv[1] if len(sys.argv) > 1 else _dt.now().strftime("%Y%m%d")
-    r = assess(day)
+    args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    persist = "--persist" in sys.argv
+    day = args[0] if args else _dt.now().strftime("%Y%m%d")
+    r = assess(day, persist=persist)
     brief = {k: v for k, v in r.items() if k != "bounds"}
     print(json.dumps(brief, ensure_ascii=False, indent=2, default=str))

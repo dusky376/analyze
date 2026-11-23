@@ -1,0 +1,7276 @@
+{
+  "version": 2,
+  "updated_at": "2026-11-23T22:29:44",
+  "feature_note": null,
+  "seeds": [
+    {
+      "date": "2026-08-10",
+      "status": "excluded_mislabeled",
+      "note": "用户 2026-11-15 确认标错，已剔除但保留记录"
+    },
+    {
+      "date": "2026-08-19",
+      "status": "anchor",
+      "note": "用户原始标注冰点日"
+    },
+    {
+      "date": "2026-08-25",
+      "status": "excluded_mislabeled",
+      "note": "用户 2026-11-15 确认标错，已剔除但保留记录"
+    },
+    {
+      "date": "2026-09-02",
+      "status": "anchor",
+      "note": "用户原始标注冰点日"
+    },
+    {
+      "date": "2026-09-09",
+      "status": "anchor",
+      "note": "用户原始标注冰点日"
+    },
+    {
+      "date": "2026-09-10",
+      "status": "anchor",
+      "note": "用户原始标注冰点日"
+    },
+    {
+      "date": "2026-09-11",
+      "status": "anchor",
+      "note": "用户原始标注冰点日"
+    },
+    {
+      "date": "2026-09-24",
+      "status": "anchor",
+      "note": "用户原始标注冰点日"
+    },
+    {
+      "date": "2026-09-28",
+      "status": "anchor",
+      "note": "用户原始标注冰点日"
+    },
+    {
+      "date": "2026-10-12",
+      "status": "anchor",
+      "note": "用户原始标注冰点日"
+    },
+    {
+      "date": "2026-10-14",
+      "status": "anchor",
+      "note": "用户原始标注冰点日"
+    },
+    {
+      "date": "2026-10-15",
+      "status": "anchor",
+      "note": "用户原始标注冰点日"
+    },
+    {
+      "date": "2026-10-22",
+      "status": "anchor",
+      "note": "用户原始标注冰点日"
+    },
+    {
+      "date": "2026-10-27",
+      "status": "anchor",
+      "note": "用户原始标注冰点日"
+    },
+    {
+      "date": "2026-10-29",
+      "status": "anchor",
+      "note": "用户原始标注冰点日"
+    },
+    {
+      "date": "2026-10-30",
+      "status": "anchor",
+      "note": "用户原始标注冰点日"
+    },
+    {
+      "date": "2026-11-06",
+      "status": "anchor",
+      "note": "用户原始标注冰点日"
+    }
+  ],
+  "auto_samples": {
+    "2026-11-16": {
+      "date": "2026-11-16",
+      "metrics": {
+        "down_share": 0.7928,
+        "limit_down_n": 78,
+        "limit_up_n": 33,
+        "dt_ratio": 2.3636,
+        "broken_hi_n": 1,
+        "up": 1135,
+        "down": 4344
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L4",
+        "dt_ratio": "L5",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-11-18": {
+      "date": "2025-11-18",
+      "metrics": {
+        "down_share": 0.7639,
+        "limit_down_n": 34,
+        "limit_up_n": 45,
+        "dt_ratio": 0.7556,
+        "broken_hi_n": 6,
+        "up": 1265,
+        "down": 4092
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L3",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L4"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "multi_dim",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-11-21": {
+      "date": "2025-11-21",
+      "metrics": {
+        "down_share": 0.9356,
+        "limit_down_n": 87,
+        "limit_up_n": 28,
+        "dt_ratio": 3.1071,
+        "broken_hi_n": 5,
+        "up": 348,
+        "down": 5054
+      },
+      "dim_levels": {
+        "down_share": "L5",
+        "limit_down_n": "L5",
+        "dt_ratio": "L5",
+        "broken_hi_n": "L3"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-01-13": {
+      "date": "2026-01-13",
+      "metrics": {
+        "down_share": 0.6967,
+        "limit_down_n": 52,
+        "limit_up_n": 68,
+        "dt_ratio": 0.7647,
+        "broken_hi_n": 9,
+        "up": 1616,
+        "down": 3712
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L3",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L5"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-01-15": {
+      "date": "2026-01-15",
+      "metrics": {
+        "down_share": 0.5829,
+        "limit_down_n": 66,
+        "limit_up_n": 55,
+        "dt_ratio": 1.2,
+        "broken_hi_n": 14,
+        "up": 2222,
+        "down": 3105
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L4",
+        "dt_ratio": "L4",
+        "broken_hi_n": "L5"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-01-16": {
+      "date": "2026-01-16",
+      "metrics": {
+        "down_share": 0.5563,
+        "limit_down_n": 54,
+        "limit_up_n": 57,
+        "dt_ratio": 0.9474,
+        "broken_hi_n": 4,
+        "up": 2361,
+        "down": 2960
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L3",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L3",
+      "is_ice": true,
+      "ice_type": "abs_limit_down",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-01-26": {
+      "date": "2026-01-26",
+      "metrics": {
+        "down_share": 0.7017,
+        "limit_down_n": 42,
+        "limit_up_n": 76,
+        "dt_ratio": 0.5526,
+        "broken_hi_n": 2,
+        "up": 1597,
+        "down": 3757
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L3",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L3",
+      "is_ice": true,
+      "ice_type": "abs_limit_down",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-01-30": {
+      "date": "2026-01-30",
+      "metrics": {
+        "down_share": 0.5418,
+        "limit_down_n": 53,
+        "limit_up_n": 48,
+        "dt_ratio": 1.1042,
+        "broken_hi_n": 5,
+        "up": 2442,
+        "down": 2888
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L3",
+        "dt_ratio": "L4",
+        "broken_hi_n": "L3"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-02-02": {
+      "date": "2026-02-02",
+      "metrics": {
+        "down_share": 0.8579,
+        "limit_down_n": 115,
+        "limit_up_n": 36,
+        "dt_ratio": 3.1944,
+        "broken_hi_n": 3,
+        "up": 768,
+        "down": 4638
+      },
+      "dim_levels": {
+        "down_share": "L4",
+        "limit_down_n": "L5",
+        "dt_ratio": "L5",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-03-03": {
+      "date": "2026-03-03",
+      "metrics": {
+        "down_share": 0.8818,
+        "limit_down_n": 73,
+        "limit_up_n": 87,
+        "dt_ratio": 0.8391,
+        "broken_hi_n": 3,
+        "up": 642,
+        "down": 4789
+      },
+      "dim_levels": {
+        "down_share": "L4",
+        "limit_down_n": "L4",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-03-20": {
+      "date": "2026-03-20",
+      "metrics": {
+        "down_share": 0.8793,
+        "limit_down_n": 20,
+        "limit_up_n": 30,
+        "dt_ratio": 0.6667,
+        "broken_hi_n": 0,
+        "up": 655,
+        "down": 4773
+      },
+      "dim_levels": {
+        "down_share": "L4",
+        "limit_down_n": "L1",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "multi_dim",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-03-23": {
+      "date": "2026-03-23",
+      "metrics": {
+        "down_share": 0.945,
+        "limit_down_n": 94,
+        "limit_up_n": 28,
+        "dt_ratio": 3.3571,
+        "broken_hi_n": 2,
+        "up": 300,
+        "down": 5158
+      },
+      "dim_levels": {
+        "down_share": "L5",
+        "limit_down_n": "L5",
+        "dt_ratio": "L5",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-04-03": {
+      "date": "2026-04-03",
+      "metrics": {
+        "down_share": 0.8691,
+        "limit_down_n": 30,
+        "limit_up_n": 36,
+        "dt_ratio": 0.8333,
+        "broken_hi_n": 3,
+        "up": 712,
+        "down": 4729
+      },
+      "dim_levels": {
+        "down_share": "L4",
+        "limit_down_n": "L2",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "multi_dim",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-05-21": {
+      "date": "2026-05-21",
+      "metrics": {
+        "down_share": 0.8741,
+        "limit_down_n": 41,
+        "limit_up_n": 37,
+        "dt_ratio": 1.1081,
+        "broken_hi_n": 5,
+        "up": 688,
+        "down": 4776
+      },
+      "dim_levels": {
+        "down_share": "L4",
+        "limit_down_n": "L3",
+        "dt_ratio": "L4",
+        "broken_hi_n": "L3"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-05-29": {
+      "date": "2026-05-29",
+      "metrics": {
+        "down_share": 0.7222,
+        "limit_down_n": 90,
+        "limit_up_n": 51,
+        "dt_ratio": 1.7647,
+        "broken_hi_n": 2,
+        "up": 1507,
+        "down": 3917
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L5",
+        "dt_ratio": "L4",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-06-08": {
+      "date": "2026-06-08",
+      "metrics": {
+        "down_share": 0.8377,
+        "limit_down_n": 46,
+        "limit_up_n": 58,
+        "dt_ratio": 0.7931,
+        "broken_hi_n": 0,
+        "up": 889,
+        "down": 4588
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L3",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L3",
+      "is_ice": true,
+      "ice_type": "abs_limit_down",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-06-10": {
+      "date": "2026-06-10",
+      "metrics": {
+        "down_share": 0.7178,
+        "limit_down_n": 41,
+        "limit_up_n": 70,
+        "dt_ratio": 0.5857,
+        "broken_hi_n": 1,
+        "up": 1532,
+        "down": 3897
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L3",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L3",
+      "is_ice": true,
+      "ice_type": "abs_limit_down",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-06-11": {
+      "date": "2026-06-11",
+      "metrics": {
+        "down_share": 0.7512,
+        "limit_down_n": 42,
+        "limit_up_n": 74,
+        "dt_ratio": 0.5676,
+        "broken_hi_n": 2,
+        "up": 1351,
+        "down": 4078
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L3",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L3",
+      "is_ice": true,
+      "ice_type": "abs_limit_down",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-06-23": {
+      "date": "2026-06-23",
+      "metrics": {
+        "down_share": 0.4902,
+        "limit_down_n": 54,
+        "limit_up_n": 100,
+        "dt_ratio": 0.54,
+        "broken_hi_n": 4,
+        "up": 2754,
+        "down": 2648
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L3",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L3",
+      "is_ice": true,
+      "ice_type": "abs_limit_down",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-06-26": {
+      "date": "2026-06-26",
+      "metrics": {
+        "down_share": 0.858,
+        "limit_down_n": 44,
+        "limit_up_n": 59,
+        "dt_ratio": 0.7458,
+        "broken_hi_n": 0,
+        "up": 775,
+        "down": 4683
+      },
+      "dim_levels": {
+        "down_share": "L4",
+        "limit_down_n": "L3",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-06-29": {
+      "date": "2026-06-29",
+      "metrics": {
+        "down_share": 0.5453,
+        "limit_down_n": 47,
+        "limit_up_n": 109,
+        "dt_ratio": 0.4312,
+        "broken_hi_n": 3,
+        "up": 2452,
+        "down": 2940
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L3",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L3",
+      "is_ice": true,
+      "ice_type": "abs_limit_down",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-02": {
+      "date": "2026-07-02",
+      "metrics": {
+        "down_share": 0.5887,
+        "limit_down_n": 48,
+        "limit_up_n": 92,
+        "dt_ratio": 0.5217,
+        "broken_hi_n": 2,
+        "up": 2209,
+        "down": 3162
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L3",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L3",
+      "is_ice": true,
+      "ice_type": "abs_limit_down",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-06": {
+      "date": "2026-07-06",
+      "metrics": {
+        "down_share": 0.6555,
+        "limit_down_n": 56,
+        "limit_up_n": 73,
+        "dt_ratio": 0.7671,
+        "broken_hi_n": 1,
+        "up": 1864,
+        "down": 3547
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L4",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-07": {
+      "date": "2026-07-07",
+      "metrics": {
+        "down_share": 0.8741,
+        "limit_down_n": 55,
+        "limit_up_n": 34,
+        "dt_ratio": 1.6176,
+        "broken_hi_n": 1,
+        "up": 690,
+        "down": 4792
+      },
+      "dim_levels": {
+        "down_share": "L4",
+        "limit_down_n": "L4",
+        "dt_ratio": "L4",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-08": {
+      "date": "2026-07-08",
+      "metrics": {
+        "down_share": 0.7064,
+        "limit_down_n": 59,
+        "limit_up_n": 58,
+        "dt_ratio": 1.0172,
+        "broken_hi_n": 1,
+        "up": 1578,
+        "down": 3797
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L4",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-13": {
+      "date": "2026-07-13",
+      "metrics": {
+        "down_share": 0.8552,
+        "limit_down_n": 200,
+        "limit_up_n": 32,
+        "dt_ratio": 6.25,
+        "broken_hi_n": 0,
+        "up": 793,
+        "down": 4685
+      },
+      "dim_levels": {
+        "down_share": "L4",
+        "limit_down_n": "L5",
+        "dt_ratio": "L5",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-15": {
+      "date": "2026-07-15",
+      "metrics": {
+        "down_share": 0.3866,
+        "limit_down_n": 53,
+        "limit_up_n": 72,
+        "dt_ratio": 0.7361,
+        "broken_hi_n": 1,
+        "up": 3338,
+        "down": 2104
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L3",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L3",
+      "is_ice": true,
+      "ice_type": "abs_limit_down",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-16": {
+      "date": "2026-07-16",
+      "metrics": {
+        "down_share": 0.5364,
+        "limit_down_n": 45,
+        "limit_up_n": 50,
+        "dt_ratio": 0.9,
+        "broken_hi_n": 2,
+        "up": 2482,
+        "down": 2872
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L3",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L3",
+      "is_ice": true,
+      "ice_type": "abs_limit_down",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-17": {
+      "date": "2026-07-17",
+      "metrics": {
+        "down_share": 0.9133,
+        "limit_down_n": 230,
+        "limit_up_n": 34,
+        "dt_ratio": 6.7647,
+        "broken_hi_n": 1,
+        "up": 475,
+        "down": 5003
+      },
+      "dim_levels": {
+        "down_share": "L5",
+        "limit_down_n": "L5",
+        "dt_ratio": "L5",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-20": {
+      "date": "2026-07-20",
+      "metrics": {
+        "down_share": 0.6814,
+        "limit_down_n": 289,
+        "limit_up_n": 56,
+        "dt_ratio": 5.1607,
+        "broken_hi_n": 4,
+        "up": 1735,
+        "down": 3710
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L5",
+        "dt_ratio": "L5",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-24": {
+      "date": "2026-07-24",
+      "metrics": {
+        "down_share": 0.8991,
+        "limit_down_n": 29,
+        "limit_up_n": 44,
+        "dt_ratio": 0.6591,
+        "broken_hi_n": 4,
+        "up": 554,
+        "down": 4936
+      },
+      "dim_levels": {
+        "down_share": "L5",
+        "limit_down_n": "L2",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "multi_dim",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-28": {
+      "date": "2026-07-28",
+      "metrics": {
+        "down_share": 0.5168,
+        "limit_down_n": 63,
+        "limit_up_n": 67,
+        "dt_ratio": 0.9403,
+        "broken_hi_n": 3,
+        "up": 2594,
+        "down": 2774
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L4",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-30": {
+      "date": "2026-07-30",
+      "metrics": {
+        "down_share": 0.6741,
+        "limit_down_n": 99,
+        "limit_up_n": 57,
+        "dt_ratio": 1.7368,
+        "broken_hi_n": 2,
+        "up": 1759,
+        "down": 3639
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L5",
+        "dt_ratio": "L4",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-08-19": {
+      "date": "2026-08-19",
+      "metrics": {
+        "down_share": 0.9191,
+        "limit_down_n": 148,
+        "limit_up_n": 38,
+        "dt_ratio": 3.8947,
+        "broken_hi_n": 5,
+        "up": 446,
+        "down": 5066
+      },
+      "dim_levels": {
+        "down_share": "L5",
+        "limit_down_n": "L5",
+        "dt_ratio": "L5",
+        "broken_hi_n": "L3"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-09-11": {
+      "date": "2026-09-11",
+      "metrics": {
+        "down_share": 0.884,
+        "limit_down_n": 24,
+        "limit_up_n": 40,
+        "dt_ratio": 0.6,
+        "broken_hi_n": 2,
+        "up": 639,
+        "down": 4870
+      },
+      "dim_levels": {
+        "down_share": "L5",
+        "limit_down_n": "L2",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "multi_dim",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-09-15": {
+      "date": "2026-09-15",
+      "metrics": {
+        "down_share": 0.7966,
+        "limit_down_n": 35,
+        "limit_up_n": 32,
+        "dt_ratio": 1.0938,
+        "broken_hi_n": 2,
+        "up": 1118,
+        "down": 4379
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L3",
+        "dt_ratio": "L4",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "multi_dim",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-09-28": {
+      "date": "2026-09-28",
+      "metrics": {
+        "down_share": 0.8355,
+        "limit_down_n": 65,
+        "limit_up_n": 35,
+        "dt_ratio": 1.8571,
+        "broken_hi_n": 4,
+        "up": 897,
+        "down": 4555
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L4",
+        "dt_ratio": "L4",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-10-15": {
+      "date": "2026-10-15",
+      "metrics": {
+        "down_share": 0.9232,
+        "limit_down_n": 31,
+        "limit_up_n": 36,
+        "dt_ratio": 0.8611,
+        "broken_hi_n": 3,
+        "up": 425,
+        "down": 5111
+      },
+      "dim_levels": {
+        "down_share": "L5",
+        "limit_down_n": "L2",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "multi_dim",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-10-22": {
+      "date": "2026-10-22",
+      "metrics": {
+        "down_share": 0.9037,
+        "limit_down_n": 64,
+        "limit_up_n": 33,
+        "dt_ratio": 1.9394,
+        "broken_hi_n": 2,
+        "up": 533,
+        "down": 4999
+      },
+      "dim_levels": {
+        "down_share": "L5",
+        "limit_down_n": "L4",
+        "dt_ratio": "L4",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-10-27": {
+      "date": "2026-10-27",
+      "metrics": {
+        "down_share": 0.8907,
+        "limit_down_n": 34,
+        "limit_up_n": 44,
+        "dt_ratio": 0.7727,
+        "broken_hi_n": 3,
+        "up": 604,
+        "down": 4923
+      },
+      "dim_levels": {
+        "down_share": "L5",
+        "limit_down_n": "L3",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "multi_dim",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-10-29": {
+      "date": "2026-10-29",
+      "metrics": {
+        "down_share": 0.8584,
+        "limit_down_n": 57,
+        "limit_up_n": 39,
+        "dt_ratio": 1.4615,
+        "broken_hi_n": 1,
+        "up": 780,
+        "down": 4728
+      },
+      "dim_levels": {
+        "down_share": "L4",
+        "limit_down_n": "L4",
+        "dt_ratio": "L4",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-10-30": {
+      "date": "2026-10-30",
+      "metrics": {
+        "down_share": 0.8377,
+        "limit_down_n": 103,
+        "limit_up_n": 49,
+        "dt_ratio": 2.102,
+        "broken_hi_n": 3,
+        "up": 892,
+        "down": 4603
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L5",
+        "dt_ratio": "L5",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-11-13": {
+      "date": "2026-11-13",
+      "metrics": {
+        "down_share": 0.8616,
+        "limit_down_n": 48,
+        "limit_up_n": 38,
+        "dt_ratio": 1.2632,
+        "broken_hi_n": 5,
+        "up": 763,
+        "down": 4750
+      },
+      "dim_levels": {
+        "down_share": "L4",
+        "limit_down_n": "L3",
+        "dt_ratio": "L4",
+        "broken_hi_n": "L3"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:29:44",
+      "source": "auto"
+    },
+    "2026-11-17": {
+      "date": "2026-11-17",
+      "metrics": {
+        "down_share": 0.7573,
+        "limit_down_n": 82,
+        "limit_up_n": 38,
+        "dt_ratio": 2.1579,
+        "broken_hi_n": 3,
+        "up": 1321,
+        "down": 4123
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L4",
+        "dt_ratio": "L5",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-11-18": {
+      "date": "2026-11-18",
+      "metrics": {
+        "down_share": 0.7583,
+        "limit_down_n": 48,
+        "limit_up_n": 43,
+        "dt_ratio": 1.1163,
+        "broken_hi_n": 0,
+        "up": 1317,
+        "down": 4133
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L3",
+        "dt_ratio": "L4",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-11-19": {
+      "date": "2026-11-19",
+      "metrics": {
+        "down_share": 0.8827,
+        "limit_down_n": 85,
+        "limit_up_n": 27,
+        "dt_ratio": 3.1481,
+        "broken_hi_n": 2,
+        "up": 648,
+        "down": 4876
+      },
+      "dim_levels": {
+        "down_share": "L5",
+        "limit_down_n": "L5",
+        "dt_ratio": "L5",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-11-20": {
+      "date": "2026-11-20",
+      "metrics": {
+        "down_share": 0.9436,
+        "limit_down_n": 84,
+        "limit_up_n": 30,
+        "dt_ratio": 2.8,
+        "broken_hi_n": 2,
+        "up": 313,
+        "down": 5235
+      },
+      "dim_levels": {
+        "down_share": "L5",
+        "limit_down_n": "L5",
+        "dt_ratio": "L5",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    }
+  },
+  "history": {
+    "2026-11-16": {
+      "date": "2026-11-16",
+      "metrics": {
+        "down_share": 0.7928,
+        "limit_down_n": 78,
+        "limit_up_n": 33,
+        "dt_ratio": 2.3636,
+        "broken_hi_n": 1,
+        "up": 1135,
+        "down": 4344
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L4",
+        "dt_ratio": "L5",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-11-12": {
+      "date": "2025-11-12",
+      "metrics": {
+        "down_share": 0.6703,
+        "limit_down_n": 5,
+        "limit_up_n": 58,
+        "dt_ratio": 0.0862,
+        "broken_hi_n": 0,
+        "up": 1747,
+        "down": 3551
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-11-13": {
+      "date": "2025-11-13",
+      "metrics": {
+        "down_share": 0.2518,
+        "limit_down_n": 0,
+        "limit_up_n": 90,
+        "dt_ratio": 0.0,
+        "broken_hi_n": 2,
+        "up": 3941,
+        "down": 1326
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-11-14": {
+      "date": "2025-11-14",
+      "metrics": {
+        "down_share": 0.6297,
+        "limit_down_n": 9,
+        "limit_up_n": 71,
+        "dt_ratio": 0.1268,
+        "broken_hi_n": 5,
+        "up": 1948,
+        "down": 3312
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L3"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-11-17": {
+      "date": "2025-11-17",
+      "metrics": {
+        "down_share": 0.5139,
+        "limit_down_n": 6,
+        "limit_up_n": 88,
+        "dt_ratio": 0.0682,
+        "broken_hi_n": 3,
+        "up": 2570,
+        "down": 2717
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-11-18": {
+      "date": "2025-11-18",
+      "metrics": {
+        "down_share": 0.7639,
+        "limit_down_n": 34,
+        "limit_up_n": 45,
+        "dt_ratio": 0.7556,
+        "broken_hi_n": 6,
+        "up": 1265,
+        "down": 4092
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L3",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L4"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "multi_dim",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-11-19": {
+      "date": "2025-11-19",
+      "metrics": {
+        "down_share": 0.777,
+        "limit_down_n": 22,
+        "limit_up_n": 56,
+        "dt_ratio": 0.3929,
+        "broken_hi_n": 4,
+        "up": 1193,
+        "down": 4157
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L2",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-11-20": {
+      "date": "2025-11-20",
+      "metrics": {
+        "down_share": 0.7269,
+        "limit_down_n": 13,
+        "limit_up_n": 41,
+        "dt_ratio": 0.3171,
+        "broken_hi_n": 4,
+        "up": 1442,
+        "down": 3839
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-11-21": {
+      "date": "2025-11-21",
+      "metrics": {
+        "down_share": 0.9356,
+        "limit_down_n": 87,
+        "limit_up_n": 28,
+        "dt_ratio": 3.1071,
+        "broken_hi_n": 5,
+        "up": 348,
+        "down": 5054
+      },
+      "dim_levels": {
+        "down_share": "L5",
+        "limit_down_n": "L5",
+        "dt_ratio": "L5",
+        "broken_hi_n": "L3"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-11-24": {
+      "date": "2025-11-24",
+      "metrics": {
+        "down_share": 0.2067,
+        "limit_down_n": 25,
+        "limit_up_n": 66,
+        "dt_ratio": 0.3788,
+        "broken_hi_n": 2,
+        "up": 4213,
+        "down": 1098
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L2",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-11-25": {
+      "date": "2025-11-25",
+      "metrics": {
+        "down_share": 0.1888,
+        "limit_down_n": 7,
+        "limit_up_n": 79,
+        "dt_ratio": 0.0886,
+        "broken_hi_n": 2,
+        "up": 4276,
+        "down": 995
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-11-26": {
+      "date": "2025-11-26",
+      "metrics": {
+        "down_share": 0.6794,
+        "limit_down_n": 7,
+        "limit_up_n": 68,
+        "dt_ratio": 0.1029,
+        "broken_hi_n": 3,
+        "up": 1688,
+        "down": 3577
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-11-27": {
+      "date": "2025-11-27",
+      "metrics": {
+        "down_share": 0.468,
+        "limit_down_n": 9,
+        "limit_up_n": 54,
+        "dt_ratio": 0.1667,
+        "broken_hi_n": 5,
+        "up": 2775,
+        "down": 2441
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L3"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-11-28": {
+      "date": "2025-11-28",
+      "metrics": {
+        "down_share": 0.2246,
+        "limit_down_n": 4,
+        "limit_up_n": 70,
+        "dt_ratio": 0.0571,
+        "broken_hi_n": 2,
+        "up": 4106,
+        "down": 1189
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-12-01": {
+      "date": "2025-12-01",
+      "metrics": {
+        "down_share": 0.3546,
+        "limit_down_n": 5,
+        "limit_up_n": 65,
+        "dt_ratio": 0.0769,
+        "broken_hi_n": 1,
+        "up": 3389,
+        "down": 1862
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-12-02": {
+      "date": "2025-12-02",
+      "metrics": {
+        "down_share": 0.7077,
+        "limit_down_n": 4,
+        "limit_up_n": 47,
+        "dt_ratio": 0.0851,
+        "broken_hi_n": 1,
+        "up": 1538,
+        "down": 3724
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-12-03": {
+      "date": "2025-12-03",
+      "metrics": {
+        "down_share": 0.7289,
+        "limit_down_n": 12,
+        "limit_up_n": 48,
+        "dt_ratio": 0.25,
+        "broken_hi_n": 7,
+        "up": 1436,
+        "down": 3861
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L0",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L5"
+      },
+      "severity_level": "L5",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-12-04": {
+      "date": "2025-12-04",
+      "metrics": {
+        "down_share": 0.7265,
+        "limit_down_n": 16,
+        "limit_up_n": 38,
+        "dt_ratio": 0.4211,
+        "broken_hi_n": 5,
+        "up": 1453,
+        "down": 3859
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L1",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L3"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-12-05": {
+      "date": "2025-12-05",
+      "metrics": {
+        "down_share": 0.1811,
+        "limit_down_n": 4,
+        "limit_up_n": 73,
+        "dt_ratio": 0.0548,
+        "broken_hi_n": 1,
+        "up": 4373,
+        "down": 967
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-12-08": {
+      "date": "2025-12-08",
+      "metrics": {
+        "down_share": 0.3528,
+        "limit_down_n": 2,
+        "limit_up_n": 74,
+        "dt_ratio": 0.027,
+        "broken_hi_n": 3,
+        "up": 3401,
+        "down": 1854
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-12-09": {
+      "date": "2025-12-09",
+      "metrics": {
+        "down_share": 0.757,
+        "limit_down_n": 8,
+        "limit_up_n": 53,
+        "dt_ratio": 0.1509,
+        "broken_hi_n": 2,
+        "up": 1299,
+        "down": 4046
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-12-10": {
+      "date": "2025-12-10",
+      "metrics": {
+        "down_share": 0.5385,
+        "limit_down_n": 4,
+        "limit_up_n": 57,
+        "dt_ratio": 0.0702,
+        "broken_hi_n": 4,
+        "up": 2426,
+        "down": 2831
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-12-11": {
+      "date": "2025-12-11",
+      "metrics": {
+        "down_share": 0.81,
+        "limit_down_n": 25,
+        "limit_up_n": 35,
+        "dt_ratio": 0.7143,
+        "broken_hi_n": 5,
+        "up": 1024,
+        "down": 4365
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L2",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L3"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-12-12": {
+      "date": "2025-12-12",
+      "metrics": {
+        "down_share": 0.4935,
+        "limit_down_n": 17,
+        "limit_up_n": 79,
+        "dt_ratio": 0.2152,
+        "broken_hi_n": 3,
+        "up": 2671,
+        "down": 2602
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-12-15": {
+      "date": "2025-12-15",
+      "metrics": {
+        "down_share": 0.5613,
+        "limit_down_n": 9,
+        "limit_up_n": 61,
+        "dt_ratio": 0.1475,
+        "broken_hi_n": 1,
+        "up": 2307,
+        "down": 2952
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-12-16": {
+      "date": "2025-12-16",
+      "metrics": {
+        "down_share": 0.7975,
+        "limit_down_n": 21,
+        "limit_up_n": 42,
+        "dt_ratio": 0.5,
+        "broken_hi_n": 4,
+        "up": 1087,
+        "down": 4282
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L1",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-12-17": {
+      "date": "2025-12-17",
+      "metrics": {
+        "down_share": 0.3101,
+        "limit_down_n": 23,
+        "limit_up_n": 50,
+        "dt_ratio": 0.46,
+        "broken_hi_n": 3,
+        "up": 3613,
+        "down": 1624
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L2",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-12-18": {
+      "date": "2025-12-18",
+      "metrics": {
+        "down_share": 0.4594,
+        "limit_down_n": 5,
+        "limit_up_n": 60,
+        "dt_ratio": 0.0833,
+        "broken_hi_n": 1,
+        "up": 2830,
+        "down": 2405
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-12-19": {
+      "date": "2025-12-19",
+      "metrics": {
+        "down_share": 0.1672,
+        "limit_down_n": 3,
+        "limit_up_n": 72,
+        "dt_ratio": 0.0417,
+        "broken_hi_n": 4,
+        "up": 4462,
+        "down": 896
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-12-22": {
+      "date": "2025-12-22",
+      "metrics": {
+        "down_share": 0.4319,
+        "limit_down_n": 10,
+        "limit_up_n": 83,
+        "dt_ratio": 0.1205,
+        "broken_hi_n": 3,
+        "up": 2969,
+        "down": 2257
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-12-23": {
+      "date": "2025-12-23",
+      "metrics": {
+        "down_share": 0.7189,
+        "limit_down_n": 12,
+        "limit_up_n": 54,
+        "dt_ratio": 0.2222,
+        "broken_hi_n": 1,
+        "up": 1501,
+        "down": 3839
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L0",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-12-24": {
+      "date": "2025-12-24",
+      "metrics": {
+        "down_share": 0.2164,
+        "limit_down_n": 8,
+        "limit_up_n": 75,
+        "dt_ratio": 0.1067,
+        "broken_hi_n": 5,
+        "up": 4107,
+        "down": 1134
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L3"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-12-25": {
+      "date": "2025-12-25",
+      "metrics": {
+        "down_share": 0.2816,
+        "limit_down_n": 0,
+        "limit_up_n": 81,
+        "dt_ratio": 0.0,
+        "broken_hi_n": 2,
+        "up": 3751,
+        "down": 1470
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-12-26": {
+      "date": "2025-12-26",
+      "metrics": {
+        "down_share": 0.6461,
+        "limit_down_n": 1,
+        "limit_up_n": 82,
+        "dt_ratio": 0.0122,
+        "broken_hi_n": 4,
+        "up": 1860,
+        "down": 3396
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-12-29": {
+      "date": "2025-12-29",
+      "metrics": {
+        "down_share": 0.6251,
+        "limit_down_n": 17,
+        "limit_up_n": 74,
+        "dt_ratio": 0.2297,
+        "broken_hi_n": 7,
+        "up": 1988,
+        "down": 3315
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L5"
+      },
+      "severity_level": "L5",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-12-30": {
+      "date": "2025-12-30",
+      "metrics": {
+        "down_share": 0.6541,
+        "limit_down_n": 14,
+        "limit_up_n": 55,
+        "dt_ratio": 0.2545,
+        "broken_hi_n": 4,
+        "up": 1832,
+        "down": 3464
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2025-12-31": {
+      "date": "2025-12-31",
+      "metrics": {
+        "down_share": 0.529,
+        "limit_down_n": 10,
+        "limit_up_n": 57,
+        "dt_ratio": 0.1754,
+        "broken_hi_n": 3,
+        "up": 2461,
+        "down": 2764
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-01-05": {
+      "date": "2026-01-05",
+      "metrics": {
+        "down_share": 0.2179,
+        "limit_down_n": 12,
+        "limit_up_n": 109,
+        "dt_ratio": 0.1101,
+        "broken_hi_n": 5,
+        "up": 4168,
+        "down": 1161
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L3"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-01-06": {
+      "date": "2026-01-06",
+      "metrics": {
+        "down_share": 0.2296,
+        "limit_down_n": 1,
+        "limit_up_n": 122,
+        "dt_ratio": 0.0082,
+        "broken_hi_n": 0,
+        "up": 4088,
+        "down": 1218
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-01-07": {
+      "date": "2026-01-07",
+      "metrics": {
+        "down_share": 0.5944,
+        "limit_down_n": 3,
+        "limit_up_n": 81,
+        "dt_ratio": 0.037,
+        "broken_hi_n": 5,
+        "up": 2166,
+        "down": 3174
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L3"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-01-08": {
+      "date": "2026-01-08",
+      "metrics": {
+        "down_share": 0.2998,
+        "limit_down_n": 4,
+        "limit_up_n": 94,
+        "dt_ratio": 0.0426,
+        "broken_hi_n": 7,
+        "up": 3714,
+        "down": 1590
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L5"
+      },
+      "severity_level": "L5",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-01-09": {
+      "date": "2026-01-09",
+      "metrics": {
+        "down_share": 0.2558,
+        "limit_down_n": 2,
+        "limit_up_n": 101,
+        "dt_ratio": 0.0198,
+        "broken_hi_n": 6,
+        "up": 3904,
+        "down": 1342
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L4"
+      },
+      "severity_level": "L4",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-01-12": {
+      "date": "2026-01-12",
+      "metrics": {
+        "down_share": 0.2217,
+        "limit_down_n": 3,
+        "limit_up_n": 187,
+        "dt_ratio": 0.016,
+        "broken_hi_n": 3,
+        "up": 4129,
+        "down": 1176
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-01-13": {
+      "date": "2026-01-13",
+      "metrics": {
+        "down_share": 0.6967,
+        "limit_down_n": 52,
+        "limit_up_n": 68,
+        "dt_ratio": 0.7647,
+        "broken_hi_n": 9,
+        "up": 1616,
+        "down": 3712
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L3",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L5"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-01-14": {
+      "date": "2026-01-14",
+      "metrics": {
+        "down_share": 0.485,
+        "limit_down_n": 20,
+        "limit_up_n": 105,
+        "dt_ratio": 0.1905,
+        "broken_hi_n": 6,
+        "up": 2737,
+        "down": 2578
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L4"
+      },
+      "severity_level": "L4",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-01-15": {
+      "date": "2026-01-15",
+      "metrics": {
+        "down_share": 0.5829,
+        "limit_down_n": 66,
+        "limit_up_n": 55,
+        "dt_ratio": 1.2,
+        "broken_hi_n": 14,
+        "up": 2222,
+        "down": 3105
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L4",
+        "dt_ratio": "L4",
+        "broken_hi_n": "L5"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-01-16": {
+      "date": "2026-01-16",
+      "metrics": {
+        "down_share": 0.5563,
+        "limit_down_n": 54,
+        "limit_up_n": 57,
+        "dt_ratio": 0.9474,
+        "broken_hi_n": 4,
+        "up": 2361,
+        "down": 2960
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L3",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L3",
+      "is_ice": true,
+      "ice_type": "abs_limit_down",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-01-19": {
+      "date": "2026-01-19",
+      "metrics": {
+        "down_share": 0.3407,
+        "limit_down_n": 28,
+        "limit_up_n": 88,
+        "dt_ratio": 0.3182,
+        "broken_hi_n": 2,
+        "up": 3516,
+        "down": 1817
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L2",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-01-20": {
+      "date": "2026-01-20",
+      "metrics": {
+        "down_share": 0.5821,
+        "limit_down_n": 16,
+        "limit_up_n": 55,
+        "dt_ratio": 0.2909,
+        "broken_hi_n": 1,
+        "up": 2220,
+        "down": 3092
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-01-21": {
+      "date": "2026-01-21",
+      "metrics": {
+        "down_share": 0.4153,
+        "limit_down_n": 6,
+        "limit_up_n": 83,
+        "dt_ratio": 0.0723,
+        "broken_hi_n": 2,
+        "up": 3081,
+        "down": 2188
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-01-22": {
+      "date": "2026-01-22",
+      "metrics": {
+        "down_share": 0.3323,
+        "limit_down_n": 3,
+        "limit_up_n": 80,
+        "dt_ratio": 0.0375,
+        "broken_hi_n": 3,
+        "up": 3561,
+        "down": 1772
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-01-23": {
+      "date": "2026-01-23",
+      "metrics": {
+        "down_share": 0.2608,
+        "limit_down_n": 1,
+        "limit_up_n": 107,
+        "dt_ratio": 0.0093,
+        "broken_hi_n": 2,
+        "up": 3925,
+        "down": 1385
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-01-26": {
+      "date": "2026-01-26",
+      "metrics": {
+        "down_share": 0.7017,
+        "limit_down_n": 42,
+        "limit_up_n": 76,
+        "dt_ratio": 0.5526,
+        "broken_hi_n": 2,
+        "up": 1597,
+        "down": 3757
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L3",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L3",
+      "is_ice": true,
+      "ice_type": "abs_limit_down",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-01-27": {
+      "date": "2026-01-27",
+      "metrics": {
+        "down_share": 0.6419,
+        "limit_down_n": 2,
+        "limit_up_n": 54,
+        "dt_ratio": 0.037,
+        "broken_hi_n": 1,
+        "up": 1920,
+        "down": 3441
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-01-28": {
+      "date": "2026-01-28",
+      "metrics": {
+        "down_share": 0.6763,
+        "limit_down_n": 8,
+        "limit_up_n": 84,
+        "dt_ratio": 0.0952,
+        "broken_hi_n": 1,
+        "up": 1734,
+        "down": 3622
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-01-29": {
+      "date": "2026-01-29",
+      "metrics": {
+        "down_share": 0.6645,
+        "limit_down_n": 15,
+        "limit_up_n": 89,
+        "dt_ratio": 0.1685,
+        "broken_hi_n": 2,
+        "up": 1794,
+        "down": 3553
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L1",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-01-30": {
+      "date": "2026-01-30",
+      "metrics": {
+        "down_share": 0.5418,
+        "limit_down_n": 53,
+        "limit_up_n": 48,
+        "dt_ratio": 1.1042,
+        "broken_hi_n": 5,
+        "up": 2442,
+        "down": 2888
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L3",
+        "dt_ratio": "L4",
+        "broken_hi_n": "L3"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-02-02": {
+      "date": "2026-02-02",
+      "metrics": {
+        "down_share": 0.8579,
+        "limit_down_n": 115,
+        "limit_up_n": 36,
+        "dt_ratio": 3.1944,
+        "broken_hi_n": 3,
+        "up": 768,
+        "down": 4638
+      },
+      "dim_levels": {
+        "down_share": "L4",
+        "limit_down_n": "L5",
+        "dt_ratio": "L5",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-02-03": {
+      "date": "2026-02-03",
+      "metrics": {
+        "down_share": 0.0969,
+        "limit_down_n": 10,
+        "limit_up_n": 69,
+        "dt_ratio": 0.1449,
+        "broken_hi_n": 0,
+        "up": 4849,
+        "down": 520
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-02-04": {
+      "date": "2026-02-04",
+      "metrics": {
+        "down_share": 0.3957,
+        "limit_down_n": 8,
+        "limit_up_n": 68,
+        "dt_ratio": 0.1176,
+        "broken_hi_n": 3,
+        "up": 3242,
+        "down": 2123
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-02-05": {
+      "date": "2026-02-05",
+      "metrics": {
+        "down_share": 0.6976,
+        "limit_down_n": 18,
+        "limit_up_n": 45,
+        "dt_ratio": 0.4,
+        "broken_hi_n": 3,
+        "up": 1608,
+        "down": 3709
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L1",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-02-06": {
+      "date": "2026-02-06",
+      "metrics": {
+        "down_share": 0.4814,
+        "limit_down_n": 7,
+        "limit_up_n": 59,
+        "dt_ratio": 0.1186,
+        "broken_hi_n": 2,
+        "up": 2741,
+        "down": 2544
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-02-09": {
+      "date": "2026-02-09",
+      "metrics": {
+        "down_share": 0.1408,
+        "limit_down_n": 3,
+        "limit_up_n": 85,
+        "dt_ratio": 0.0353,
+        "broken_hi_n": 1,
+        "up": 4600,
+        "down": 754
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-02-10": {
+      "date": "2026-02-10",
+      "metrics": {
+        "down_share": 0.5878,
+        "limit_down_n": 5,
+        "limit_up_n": 60,
+        "dt_ratio": 0.0833,
+        "broken_hi_n": 4,
+        "up": 2186,
+        "down": 3117
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-02-11": {
+      "date": "2026-02-11",
+      "metrics": {
+        "down_share": 0.6129,
+        "limit_down_n": 9,
+        "limit_up_n": 52,
+        "dt_ratio": 0.1731,
+        "broken_hi_n": 0,
+        "up": 2041,
+        "down": 3232
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-02-12": {
+      "date": "2026-02-12",
+      "metrics": {
+        "down_share": 0.6083,
+        "limit_down_n": 14,
+        "limit_up_n": 61,
+        "dt_ratio": 0.2295,
+        "broken_hi_n": 4,
+        "up": 2103,
+        "down": 3266
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-02-13": {
+      "date": "2026-02-13",
+      "metrics": {
+        "down_share": 0.7134,
+        "limit_down_n": 16,
+        "limit_up_n": 32,
+        "dt_ratio": 0.5,
+        "broken_hi_n": 4,
+        "up": 1533,
+        "down": 3816
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L1",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-02-24": {
+      "date": "2026-02-24",
+      "metrics": {
+        "down_share": 0.2572,
+        "limit_down_n": 17,
+        "limit_up_n": 94,
+        "dt_ratio": 0.1809,
+        "broken_hi_n": 2,
+        "up": 3996,
+        "down": 1384
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-02-25": {
+      "date": "2026-02-25",
+      "metrics": {
+        "down_share": 0.301,
+        "limit_down_n": 3,
+        "limit_up_n": 77,
+        "dt_ratio": 0.039,
+        "broken_hi_n": 1,
+        "up": 3732,
+        "down": 1607
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-02-26": {
+      "date": "2026-02-26",
+      "metrics": {
+        "down_share": 0.5355,
+        "limit_down_n": 4,
+        "limit_up_n": 64,
+        "dt_ratio": 0.0625,
+        "broken_hi_n": 2,
+        "up": 2478,
+        "down": 2857
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-02-27": {
+      "date": "2026-02-27",
+      "metrics": {
+        "down_share": 0.387,
+        "limit_down_n": 0,
+        "limit_up_n": 76,
+        "dt_ratio": 0.0,
+        "broken_hi_n": 2,
+        "up": 3262,
+        "down": 2059
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-03-02": {
+      "date": "2026-03-02",
+      "metrics": {
+        "down_share": 0.7888,
+        "limit_down_n": 8,
+        "limit_up_n": 96,
+        "dt_ratio": 0.0833,
+        "broken_hi_n": 5,
+        "up": 1142,
+        "down": 4264
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L3"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-03-03": {
+      "date": "2026-03-03",
+      "metrics": {
+        "down_share": 0.8818,
+        "limit_down_n": 73,
+        "limit_up_n": 87,
+        "dt_ratio": 0.8391,
+        "broken_hi_n": 3,
+        "up": 642,
+        "down": 4789
+      },
+      "dim_levels": {
+        "down_share": "L4",
+        "limit_down_n": "L4",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-03-04": {
+      "date": "2026-03-04",
+      "metrics": {
+        "down_share": 0.6755,
+        "limit_down_n": 19,
+        "limit_up_n": 44,
+        "dt_ratio": 0.4318,
+        "broken_hi_n": 2,
+        "up": 1741,
+        "down": 3625
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L1",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-03-05": {
+      "date": "2026-03-05",
+      "metrics": {
+        "down_share": 0.2419,
+        "limit_down_n": 3,
+        "limit_up_n": 69,
+        "dt_ratio": 0.0435,
+        "broken_hi_n": 6,
+        "up": 4068,
+        "down": 1298
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L4"
+      },
+      "severity_level": "L4",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-03-06": {
+      "date": "2026-03-06",
+      "metrics": {
+        "down_share": 0.2124,
+        "limit_down_n": 0,
+        "limit_up_n": 74,
+        "dt_ratio": 0.0,
+        "broken_hi_n": 0,
+        "up": 4249,
+        "down": 1146
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-03-09": {
+      "date": "2026-03-09",
+      "metrics": {
+        "down_share": 0.7352,
+        "limit_down_n": 6,
+        "limit_up_n": 42,
+        "dt_ratio": 0.1429,
+        "broken_hi_n": 2,
+        "up": 1421,
+        "down": 3946
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-03-10": {
+      "date": "2026-03-10",
+      "metrics": {
+        "down_share": 0.158,
+        "limit_down_n": 4,
+        "limit_up_n": 56,
+        "dt_ratio": 0.0714,
+        "broken_hi_n": 2,
+        "up": 4519,
+        "down": 848
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-03-11": {
+      "date": "2026-03-11",
+      "metrics": {
+        "down_share": 0.6155,
+        "limit_down_n": 3,
+        "limit_up_n": 53,
+        "dt_ratio": 0.0566,
+        "broken_hi_n": 1,
+        "up": 2048,
+        "down": 3278
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-03-12": {
+      "date": "2026-03-12",
+      "metrics": {
+        "down_share": 0.7221,
+        "limit_down_n": 3,
+        "limit_up_n": 53,
+        "dt_ratio": 0.0566,
+        "broken_hi_n": 1,
+        "up": 1492,
+        "down": 3876
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-03-13": {
+      "date": "2026-03-13",
+      "metrics": {
+        "down_share": 0.7188,
+        "limit_down_n": 13,
+        "limit_up_n": 59,
+        "dt_ratio": 0.2203,
+        "broken_hi_n": 1,
+        "up": 1494,
+        "down": 3819
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-03-16": {
+      "date": "2026-03-16",
+      "metrics": {
+        "down_share": 0.4678,
+        "limit_down_n": 8,
+        "limit_up_n": 47,
+        "dt_ratio": 0.1702,
+        "broken_hi_n": 3,
+        "up": 2830,
+        "down": 2488
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-03-17": {
+      "date": "2026-03-17",
+      "metrics": {
+        "down_share": 0.8397,
+        "limit_down_n": 13,
+        "limit_up_n": 39,
+        "dt_ratio": 0.3333,
+        "broken_hi_n": 0,
+        "up": 864,
+        "down": 4526
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-03-18": {
+      "date": "2026-03-18",
+      "metrics": {
+        "down_share": 0.3397,
+        "limit_down_n": 5,
+        "limit_up_n": 57,
+        "dt_ratio": 0.0877,
+        "broken_hi_n": 5,
+        "up": 3543,
+        "down": 1823
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L3"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-03-19": {
+      "date": "2026-03-19",
+      "metrics": {
+        "down_share": 0.9079,
+        "limit_down_n": 9,
+        "limit_up_n": 28,
+        "dt_ratio": 0.3214,
+        "broken_hi_n": 1,
+        "up": 501,
+        "down": 4940
+      },
+      "dim_levels": {
+        "down_share": "L5",
+        "limit_down_n": "L0",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L5",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-03-20": {
+      "date": "2026-03-20",
+      "metrics": {
+        "down_share": 0.8793,
+        "limit_down_n": 20,
+        "limit_up_n": 30,
+        "dt_ratio": 0.6667,
+        "broken_hi_n": 0,
+        "up": 655,
+        "down": 4773
+      },
+      "dim_levels": {
+        "down_share": "L4",
+        "limit_down_n": "L1",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "multi_dim",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-03-23": {
+      "date": "2026-03-23",
+      "metrics": {
+        "down_share": 0.945,
+        "limit_down_n": 94,
+        "limit_up_n": 28,
+        "dt_ratio": 3.3571,
+        "broken_hi_n": 2,
+        "up": 300,
+        "down": 5158
+      },
+      "dim_levels": {
+        "down_share": "L5",
+        "limit_down_n": "L5",
+        "dt_ratio": "L5",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-03-24": {
+      "date": "2026-03-24",
+      "metrics": {
+        "down_share": 0.0599,
+        "limit_down_n": 3,
+        "limit_up_n": 85,
+        "dt_ratio": 0.0353,
+        "broken_hi_n": 2,
+        "up": 5120,
+        "down": 326
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-03-25": {
+      "date": "2026-03-25",
+      "metrics": {
+        "down_share": 0.1018,
+        "limit_down_n": 1,
+        "limit_up_n": 84,
+        "dt_ratio": 0.0119,
+        "broken_hi_n": 0,
+        "up": 4863,
+        "down": 551
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-03-26": {
+      "date": "2026-03-26",
+      "metrics": {
+        "down_share": 0.8304,
+        "limit_down_n": 12,
+        "limit_up_n": 40,
+        "dt_ratio": 0.3,
+        "broken_hi_n": 4,
+        "up": 914,
+        "down": 4476
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L0",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-03-27": {
+      "date": "2026-03-27",
+      "metrics": {
+        "down_share": 0.1982,
+        "limit_down_n": 2,
+        "limit_up_n": 79,
+        "dt_ratio": 0.0253,
+        "broken_hi_n": 1,
+        "up": 4321,
+        "down": 1068
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-03-30": {
+      "date": "2026-03-30",
+      "metrics": {
+        "down_share": 0.4611,
+        "limit_down_n": 11,
+        "limit_up_n": 64,
+        "dt_ratio": 0.1719,
+        "broken_hi_n": 2,
+        "up": 2863,
+        "down": 2450
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-03-31": {
+      "date": "2026-03-31",
+      "metrics": {
+        "down_share": 0.8125,
+        "limit_down_n": 4,
+        "limit_up_n": 53,
+        "dt_ratio": 0.0755,
+        "broken_hi_n": 2,
+        "up": 1006,
+        "down": 4360
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-04-01": {
+      "date": "2026-04-01",
+      "metrics": {
+        "down_share": 0.1632,
+        "limit_down_n": 8,
+        "limit_up_n": 59,
+        "dt_ratio": 0.1356,
+        "broken_hi_n": 1,
+        "up": 4486,
+        "down": 875
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-04-02": {
+      "date": "2026-04-02",
+      "metrics": {
+        "down_share": 0.8067,
+        "limit_down_n": 12,
+        "limit_up_n": 28,
+        "dt_ratio": 0.4286,
+        "broken_hi_n": 0,
+        "up": 1046,
+        "down": 4364
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L0",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-04-03": {
+      "date": "2026-04-03",
+      "metrics": {
+        "down_share": 0.8691,
+        "limit_down_n": 30,
+        "limit_up_n": 36,
+        "dt_ratio": 0.8333,
+        "broken_hi_n": 3,
+        "up": 712,
+        "down": 4729
+      },
+      "dim_levels": {
+        "down_share": "L4",
+        "limit_down_n": "L2",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "multi_dim",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-04-07": {
+      "date": "2026-04-07",
+      "metrics": {
+        "down_share": 0.2623,
+        "limit_down_n": 8,
+        "limit_up_n": 93,
+        "dt_ratio": 0.086,
+        "broken_hi_n": 0,
+        "up": 3971,
+        "down": 1412
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-04-08": {
+      "date": "2026-04-08",
+      "metrics": {
+        "down_share": 0.0541,
+        "limit_down_n": 7,
+        "limit_up_n": 125,
+        "dt_ratio": 0.056,
+        "broken_hi_n": 2,
+        "up": 5159,
+        "down": 295
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-04-09": {
+      "date": "2026-04-09",
+      "metrics": {
+        "down_share": 0.7898,
+        "limit_down_n": 4,
+        "limit_up_n": 54,
+        "dt_ratio": 0.0741,
+        "broken_hi_n": 1,
+        "up": 1139,
+        "down": 4280
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-04-10": {
+      "date": "2026-04-10",
+      "metrics": {
+        "down_share": 0.2593,
+        "limit_down_n": 9,
+        "limit_up_n": 60,
+        "dt_ratio": 0.15,
+        "broken_hi_n": 1,
+        "up": 3964,
+        "down": 1388
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-04-13": {
+      "date": "2026-04-13",
+      "metrics": {
+        "down_share": 0.5545,
+        "limit_down_n": 6,
+        "limit_up_n": 62,
+        "dt_ratio": 0.0968,
+        "broken_hi_n": 2,
+        "up": 2369,
+        "down": 2949
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-04-14": {
+      "date": "2026-04-14",
+      "metrics": {
+        "down_share": 0.2997,
+        "limit_down_n": 5,
+        "limit_up_n": 56,
+        "dt_ratio": 0.0893,
+        "broken_hi_n": 1,
+        "up": 3711,
+        "down": 1588
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-04-15": {
+      "date": "2026-04-15",
+      "metrics": {
+        "down_share": 0.6579,
+        "limit_down_n": 10,
+        "limit_up_n": 59,
+        "dt_ratio": 0.1695,
+        "broken_hi_n": 3,
+        "up": 1835,
+        "down": 3529
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-04-16": {
+      "date": "2026-04-16",
+      "metrics": {
+        "down_share": 0.1996,
+        "limit_down_n": 3,
+        "limit_up_n": 79,
+        "dt_ratio": 0.038,
+        "broken_hi_n": 2,
+        "up": 4278,
+        "down": 1067
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-04-17": {
+      "date": "2026-04-17",
+      "metrics": {
+        "down_share": 0.5545,
+        "limit_down_n": 4,
+        "limit_up_n": 71,
+        "dt_ratio": 0.0563,
+        "broken_hi_n": 0,
+        "up": 2390,
+        "down": 2975
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-04-20": {
+      "date": "2026-04-20",
+      "metrics": {
+        "down_share": 0.355,
+        "limit_down_n": 6,
+        "limit_up_n": 76,
+        "dt_ratio": 0.0789,
+        "broken_hi_n": 4,
+        "up": 3421,
+        "down": 1883
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-04-21": {
+      "date": "2026-04-21",
+      "metrics": {
+        "down_share": 0.6386,
+        "limit_down_n": 12,
+        "limit_up_n": 53,
+        "dt_ratio": 0.2264,
+        "broken_hi_n": 3,
+        "up": 1938,
+        "down": 3425
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L0",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-04-22": {
+      "date": "2026-04-22",
+      "metrics": {
+        "down_share": 0.454,
+        "limit_down_n": 6,
+        "limit_up_n": 56,
+        "dt_ratio": 0.1071,
+        "broken_hi_n": 2,
+        "up": 2914,
+        "down": 2423
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-04-23": {
+      "date": "2026-04-23",
+      "metrics": {
+        "down_share": 0.7538,
+        "limit_down_n": 18,
+        "limit_up_n": 50,
+        "dt_ratio": 0.36,
+        "broken_hi_n": 1,
+        "up": 1327,
+        "down": 4064
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-04-24": {
+      "date": "2026-04-24",
+      "metrics": {
+        "down_share": 0.6217,
+        "limit_down_n": 27,
+        "limit_up_n": 59,
+        "dt_ratio": 0.4576,
+        "broken_hi_n": 4,
+        "up": 2031,
+        "down": 3338
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L2",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-04-27": {
+      "date": "2026-04-27",
+      "metrics": {
+        "down_share": 0.3901,
+        "limit_down_n": 37,
+        "limit_up_n": 66,
+        "dt_ratio": 0.5606,
+        "broken_hi_n": 1,
+        "up": 3276,
+        "down": 2095
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L3",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-04-28": {
+      "date": "2026-04-28",
+      "metrics": {
+        "down_share": 0.6843,
+        "limit_down_n": 37,
+        "limit_up_n": 59,
+        "dt_ratio": 0.6271,
+        "broken_hi_n": 1,
+        "up": 1694,
+        "down": 3672
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L3",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-04-29": {
+      "date": "2026-04-29",
+      "metrics": {
+        "down_share": 0.2606,
+        "limit_down_n": 17,
+        "limit_up_n": 100,
+        "dt_ratio": 0.17,
+        "broken_hi_n": 3,
+        "up": 3966,
+        "down": 1398
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L1",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-04-30": {
+      "date": "2026-04-30",
+      "metrics": {
+        "down_share": 0.4638,
+        "limit_down_n": 19,
+        "limit_up_n": 81,
+        "dt_ratio": 0.2346,
+        "broken_hi_n": 1,
+        "up": 2860,
+        "down": 2474
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-05-06": {
+      "date": "2026-05-06",
+      "metrics": {
+        "down_share": 0.2765,
+        "limit_down_n": 14,
+        "limit_up_n": 103,
+        "dt_ratio": 0.1359,
+        "broken_hi_n": 1,
+        "up": 3884,
+        "down": 1484
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L1",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-05-07": {
+      "date": "2026-05-07",
+      "metrics": {
+        "down_share": 0.3419,
+        "limit_down_n": 9,
+        "limit_up_n": 101,
+        "dt_ratio": 0.0891,
+        "broken_hi_n": 6,
+        "up": 3519,
+        "down": 1828
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L4"
+      },
+      "severity_level": "L4",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-05-08": {
+      "date": "2026-05-08",
+      "metrics": {
+        "down_share": 0.3227,
+        "limit_down_n": 8,
+        "limit_up_n": 98,
+        "dt_ratio": 0.0816,
+        "broken_hi_n": 2,
+        "up": 3631,
+        "down": 1730
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-05-11": {
+      "date": "2026-05-11",
+      "metrics": {
+        "down_share": 0.4194,
+        "limit_down_n": 10,
+        "limit_up_n": 98,
+        "dt_ratio": 0.102,
+        "broken_hi_n": 3,
+        "up": 3109,
+        "down": 2246
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-05-12": {
+      "date": "2026-05-12",
+      "metrics": {
+        "down_share": 0.7463,
+        "limit_down_n": 10,
+        "limit_up_n": 57,
+        "dt_ratio": 0.1754,
+        "broken_hi_n": 4,
+        "up": 1376,
+        "down": 4047
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-05-13": {
+      "date": "2026-05-13",
+      "metrics": {
+        "down_share": 0.4001,
+        "limit_down_n": 8,
+        "limit_up_n": 112,
+        "dt_ratio": 0.0714,
+        "broken_hi_n": 4,
+        "up": 3206,
+        "down": 2138
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-05-14": {
+      "date": "2026-05-14",
+      "metrics": {
+        "down_share": 0.8077,
+        "limit_down_n": 24,
+        "limit_up_n": 57,
+        "dt_ratio": 0.4211,
+        "broken_hi_n": 4,
+        "up": 1044,
+        "down": 4386
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L2",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-05-15": {
+      "date": "2026-05-15",
+      "metrics": {
+        "down_share": 0.6659,
+        "limit_down_n": 19,
+        "limit_up_n": 56,
+        "dt_ratio": 0.3393,
+        "broken_hi_n": 3,
+        "up": 1802,
+        "down": 3591
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-05-18": {
+      "date": "2026-05-18",
+      "metrics": {
+        "down_share": 0.5594,
+        "limit_down_n": 26,
+        "limit_up_n": 83,
+        "dt_ratio": 0.3133,
+        "broken_hi_n": 1,
+        "up": 2367,
+        "down": 3005
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L2",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-05-19": {
+      "date": "2026-05-19",
+      "metrics": {
+        "down_share": 0.3318,
+        "limit_down_n": 17,
+        "limit_up_n": 91,
+        "dt_ratio": 0.1868,
+        "broken_hi_n": 2,
+        "up": 3592,
+        "down": 1784
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-05-20": {
+      "date": "2026-05-20",
+      "metrics": {
+        "down_share": 0.7006,
+        "limit_down_n": 32,
+        "limit_up_n": 62,
+        "dt_ratio": 0.5161,
+        "broken_hi_n": 2,
+        "up": 1628,
+        "down": 3809
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L3",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-05-21": {
+      "date": "2026-05-21",
+      "metrics": {
+        "down_share": 0.8741,
+        "limit_down_n": 41,
+        "limit_up_n": 37,
+        "dt_ratio": 1.1081,
+        "broken_hi_n": 5,
+        "up": 688,
+        "down": 4776
+      },
+      "dim_levels": {
+        "down_share": "L4",
+        "limit_down_n": "L3",
+        "dt_ratio": "L4",
+        "broken_hi_n": "L3"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-05-22": {
+      "date": "2026-05-22",
+      "metrics": {
+        "down_share": 0.2834,
+        "limit_down_n": 13,
+        "limit_up_n": 116,
+        "dt_ratio": 0.1121,
+        "broken_hi_n": 2,
+        "up": 3849,
+        "down": 1522
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L1",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-05-25": {
+      "date": "2026-05-25",
+      "metrics": {
+        "down_share": 0.5985,
+        "limit_down_n": 26,
+        "limit_up_n": 105,
+        "dt_ratio": 0.2476,
+        "broken_hi_n": 3,
+        "up": 2169,
+        "down": 3233
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L2",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-05-26": {
+      "date": "2026-05-26",
+      "metrics": {
+        "down_share": 0.754,
+        "limit_down_n": 37,
+        "limit_up_n": 49,
+        "dt_ratio": 0.7551,
+        "broken_hi_n": 2,
+        "up": 1336,
+        "down": 4095
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L3",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-05-27": {
+      "date": "2026-05-27",
+      "metrics": {
+        "down_share": 0.8233,
+        "limit_down_n": 38,
+        "limit_up_n": 46,
+        "dt_ratio": 0.8261,
+        "broken_hi_n": 4,
+        "up": 964,
+        "down": 4492
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L3",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-05-28": {
+      "date": "2026-05-28",
+      "metrics": {
+        "down_share": 0.4446,
+        "limit_down_n": 20,
+        "limit_up_n": 102,
+        "dt_ratio": 0.1961,
+        "broken_hi_n": 0,
+        "up": 2988,
+        "down": 2392
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-05-29": {
+      "date": "2026-05-29",
+      "metrics": {
+        "down_share": 0.7222,
+        "limit_down_n": 90,
+        "limit_up_n": 51,
+        "dt_ratio": 1.7647,
+        "broken_hi_n": 2,
+        "up": 1507,
+        "down": 3917
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L5",
+        "dt_ratio": "L4",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-06-01": {
+      "date": "2026-06-01",
+      "metrics": {
+        "down_share": 0.3111,
+        "limit_down_n": 38,
+        "limit_up_n": 120,
+        "dt_ratio": 0.3167,
+        "broken_hi_n": 2,
+        "up": 3754,
+        "down": 1695
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L3",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-06-02": {
+      "date": "2026-06-02",
+      "metrics": {
+        "down_share": 0.7166,
+        "limit_down_n": 24,
+        "limit_up_n": 67,
+        "dt_ratio": 0.3582,
+        "broken_hi_n": 3,
+        "up": 1534,
+        "down": 3878
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L2",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-06-03": {
+      "date": "2026-06-03",
+      "metrics": {
+        "down_share": 0.6867,
+        "limit_down_n": 23,
+        "limit_up_n": 69,
+        "dt_ratio": 0.3333,
+        "broken_hi_n": 2,
+        "up": 1702,
+        "down": 3730
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L2",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-06-04": {
+      "date": "2026-06-04",
+      "metrics": {
+        "down_share": 0.756,
+        "limit_down_n": 17,
+        "limit_up_n": 79,
+        "dt_ratio": 0.2152,
+        "broken_hi_n": 2,
+        "up": 1331,
+        "down": 4124
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-06-05": {
+      "date": "2026-06-05",
+      "metrics": {
+        "down_share": 0.3999,
+        "limit_down_n": 25,
+        "limit_up_n": 75,
+        "dt_ratio": 0.3333,
+        "broken_hi_n": 3,
+        "up": 3228,
+        "down": 2151
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L2",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-06-08": {
+      "date": "2026-06-08",
+      "metrics": {
+        "down_share": 0.8377,
+        "limit_down_n": 46,
+        "limit_up_n": 58,
+        "dt_ratio": 0.7931,
+        "broken_hi_n": 0,
+        "up": 889,
+        "down": 4588
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L3",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L3",
+      "is_ice": true,
+      "ice_type": "abs_limit_down",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-06-09": {
+      "date": "2026-06-09",
+      "metrics": {
+        "down_share": 0.3854,
+        "limit_down_n": 11,
+        "limit_up_n": 130,
+        "dt_ratio": 0.0846,
+        "broken_hi_n": 3,
+        "up": 3295,
+        "down": 2066
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-06-10": {
+      "date": "2026-06-10",
+      "metrics": {
+        "down_share": 0.7178,
+        "limit_down_n": 41,
+        "limit_up_n": 70,
+        "dt_ratio": 0.5857,
+        "broken_hi_n": 1,
+        "up": 1532,
+        "down": 3897
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L3",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L3",
+      "is_ice": true,
+      "ice_type": "abs_limit_down",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-06-11": {
+      "date": "2026-06-11",
+      "metrics": {
+        "down_share": 0.7512,
+        "limit_down_n": 42,
+        "limit_up_n": 74,
+        "dt_ratio": 0.5676,
+        "broken_hi_n": 2,
+        "up": 1351,
+        "down": 4078
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L3",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L3",
+      "is_ice": true,
+      "ice_type": "abs_limit_down",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-06-12": {
+      "date": "2026-06-12",
+      "metrics": {
+        "down_share": 0.2825,
+        "limit_down_n": 25,
+        "limit_up_n": 96,
+        "dt_ratio": 0.2604,
+        "broken_hi_n": 1,
+        "up": 3894,
+        "down": 1533
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L2",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-06-15": {
+      "date": "2026-06-15",
+      "metrics": {
+        "down_share": 0.278,
+        "limit_down_n": 11,
+        "limit_up_n": 151,
+        "dt_ratio": 0.0728,
+        "broken_hi_n": 2,
+        "up": 3878,
+        "down": 1493
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-06-16": {
+      "date": "2026-06-16",
+      "metrics": {
+        "down_share": 0.4984,
+        "limit_down_n": 10,
+        "limit_up_n": 122,
+        "dt_ratio": 0.082,
+        "broken_hi_n": 2,
+        "up": 2708,
+        "down": 2691
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-06-17": {
+      "date": "2026-06-17",
+      "metrics": {
+        "down_share": 0.6866,
+        "limit_down_n": 11,
+        "limit_up_n": 90,
+        "dt_ratio": 0.1222,
+        "broken_hi_n": 4,
+        "up": 1708,
+        "down": 3742
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-06-18": {
+      "date": "2026-06-18",
+      "metrics": {
+        "down_share": 0.632,
+        "limit_down_n": 31,
+        "limit_up_n": 93,
+        "dt_ratio": 0.3333,
+        "broken_hi_n": 10,
+        "up": 1991,
+        "down": 3419
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L2",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L5"
+      },
+      "severity_level": "L5",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-06-22": {
+      "date": "2026-06-22",
+      "metrics": {
+        "down_share": 0.4599,
+        "limit_down_n": 10,
+        "limit_up_n": 138,
+        "dt_ratio": 0.0725,
+        "broken_hi_n": 2,
+        "up": 2902,
+        "down": 2471
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-06-23": {
+      "date": "2026-06-23",
+      "metrics": {
+        "down_share": 0.4902,
+        "limit_down_n": 54,
+        "limit_up_n": 100,
+        "dt_ratio": 0.54,
+        "broken_hi_n": 4,
+        "up": 2754,
+        "down": 2648
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L3",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L3",
+      "is_ice": true,
+      "ice_type": "abs_limit_down",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-06-24": {
+      "date": "2026-06-24",
+      "metrics": {
+        "down_share": 0.7383,
+        "limit_down_n": 15,
+        "limit_up_n": 98,
+        "dt_ratio": 0.1531,
+        "broken_hi_n": 3,
+        "up": 1428,
+        "down": 4029
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L1",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-06-25": {
+      "date": "2026-06-25",
+      "metrics": {
+        "down_share": 0.7753,
+        "limit_down_n": 29,
+        "limit_up_n": 91,
+        "dt_ratio": 0.3187,
+        "broken_hi_n": 4,
+        "up": 1225,
+        "down": 4227
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L2",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-06-26": {
+      "date": "2026-06-26",
+      "metrics": {
+        "down_share": 0.858,
+        "limit_down_n": 44,
+        "limit_up_n": 59,
+        "dt_ratio": 0.7458,
+        "broken_hi_n": 0,
+        "up": 775,
+        "down": 4683
+      },
+      "dim_levels": {
+        "down_share": "L4",
+        "limit_down_n": "L3",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-06-29": {
+      "date": "2026-06-29",
+      "metrics": {
+        "down_share": 0.5453,
+        "limit_down_n": 47,
+        "limit_up_n": 109,
+        "dt_ratio": 0.4312,
+        "broken_hi_n": 3,
+        "up": 2452,
+        "down": 2940
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L3",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L3",
+      "is_ice": true,
+      "ice_type": "abs_limit_down",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-06-30": {
+      "date": "2026-06-30",
+      "metrics": {
+        "down_share": 0.4392,
+        "limit_down_n": 12,
+        "limit_up_n": 144,
+        "dt_ratio": 0.0833,
+        "broken_hi_n": 2,
+        "up": 3034,
+        "down": 2376
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-01": {
+      "date": "2026-07-01",
+      "metrics": {
+        "down_share": 0.2104,
+        "limit_down_n": 13,
+        "limit_up_n": 157,
+        "dt_ratio": 0.0828,
+        "broken_hi_n": 1,
+        "up": 4317,
+        "down": 1150
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L1",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-02": {
+      "date": "2026-07-02",
+      "metrics": {
+        "down_share": 0.5887,
+        "limit_down_n": 48,
+        "limit_up_n": 92,
+        "dt_ratio": 0.5217,
+        "broken_hi_n": 2,
+        "up": 2209,
+        "down": 3162
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L3",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L3",
+      "is_ice": true,
+      "ice_type": "abs_limit_down",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-03": {
+      "date": "2026-07-03",
+      "metrics": {
+        "down_share": 0.3016,
+        "limit_down_n": 30,
+        "limit_up_n": 108,
+        "dt_ratio": 0.2778,
+        "broken_hi_n": 2,
+        "up": 3788,
+        "down": 1636
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L2",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-06": {
+      "date": "2026-07-06",
+      "metrics": {
+        "down_share": 0.6555,
+        "limit_down_n": 56,
+        "limit_up_n": 73,
+        "dt_ratio": 0.7671,
+        "broken_hi_n": 1,
+        "up": 1864,
+        "down": 3547
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L4",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-07": {
+      "date": "2026-07-07",
+      "metrics": {
+        "down_share": 0.8741,
+        "limit_down_n": 55,
+        "limit_up_n": 34,
+        "dt_ratio": 1.6176,
+        "broken_hi_n": 1,
+        "up": 690,
+        "down": 4792
+      },
+      "dim_levels": {
+        "down_share": "L4",
+        "limit_down_n": "L4",
+        "dt_ratio": "L4",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-08": {
+      "date": "2026-07-08",
+      "metrics": {
+        "down_share": 0.7064,
+        "limit_down_n": 59,
+        "limit_up_n": 58,
+        "dt_ratio": 1.0172,
+        "broken_hi_n": 1,
+        "up": 1578,
+        "down": 3797
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L4",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-09": {
+      "date": "2026-07-09",
+      "metrics": {
+        "down_share": 0.5399,
+        "limit_down_n": 20,
+        "limit_up_n": 74,
+        "dt_ratio": 0.2703,
+        "broken_hi_n": 2,
+        "up": 2470,
+        "down": 2898
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-10": {
+      "date": "2026-07-10",
+      "metrics": {
+        "down_share": 0.3131,
+        "limit_down_n": 18,
+        "limit_up_n": 96,
+        "dt_ratio": 0.1875,
+        "broken_hi_n": 2,
+        "up": 3738,
+        "down": 1704
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-13": {
+      "date": "2026-07-13",
+      "metrics": {
+        "down_share": 0.8552,
+        "limit_down_n": 200,
+        "limit_up_n": 32,
+        "dt_ratio": 6.25,
+        "broken_hi_n": 0,
+        "up": 793,
+        "down": 4685
+      },
+      "dim_levels": {
+        "down_share": "L4",
+        "limit_down_n": "L5",
+        "dt_ratio": "L5",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-14": {
+      "date": "2026-07-14",
+      "metrics": {
+        "down_share": 0.2298,
+        "limit_down_n": 31,
+        "limit_up_n": 88,
+        "dt_ratio": 0.3523,
+        "broken_hi_n": 3,
+        "up": 4199,
+        "down": 1253
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L2",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-15": {
+      "date": "2026-07-15",
+      "metrics": {
+        "down_share": 0.3866,
+        "limit_down_n": 53,
+        "limit_up_n": 72,
+        "dt_ratio": 0.7361,
+        "broken_hi_n": 1,
+        "up": 3338,
+        "down": 2104
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L3",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L3",
+      "is_ice": true,
+      "ice_type": "abs_limit_down",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-16": {
+      "date": "2026-07-16",
+      "metrics": {
+        "down_share": 0.5364,
+        "limit_down_n": 45,
+        "limit_up_n": 50,
+        "dt_ratio": 0.9,
+        "broken_hi_n": 2,
+        "up": 2482,
+        "down": 2872
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L3",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L3",
+      "is_ice": true,
+      "ice_type": "abs_limit_down",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-17": {
+      "date": "2026-07-17",
+      "metrics": {
+        "down_share": 0.9133,
+        "limit_down_n": 230,
+        "limit_up_n": 34,
+        "dt_ratio": 6.7647,
+        "broken_hi_n": 1,
+        "up": 475,
+        "down": 5003
+      },
+      "dim_levels": {
+        "down_share": "L5",
+        "limit_down_n": "L5",
+        "dt_ratio": "L5",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-20": {
+      "date": "2026-07-20",
+      "metrics": {
+        "down_share": 0.6814,
+        "limit_down_n": 289,
+        "limit_up_n": 56,
+        "dt_ratio": 5.1607,
+        "broken_hi_n": 4,
+        "up": 1735,
+        "down": 3710
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L5",
+        "dt_ratio": "L5",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-21": {
+      "date": "2026-07-21",
+      "metrics": {
+        "down_share": 0.4262,
+        "limit_down_n": 31,
+        "limit_up_n": 124,
+        "dt_ratio": 0.25,
+        "broken_hi_n": 0,
+        "up": 3100,
+        "down": 2303
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L2",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-22": {
+      "date": "2026-07-22",
+      "metrics": {
+        "down_share": 0.7191,
+        "limit_down_n": 13,
+        "limit_up_n": 49,
+        "dt_ratio": 0.2653,
+        "broken_hi_n": 0,
+        "up": 1517,
+        "down": 3884
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-23": {
+      "date": "2026-07-23",
+      "metrics": {
+        "down_share": 0.2226,
+        "limit_down_n": 4,
+        "limit_up_n": 129,
+        "dt_ratio": 0.031,
+        "broken_hi_n": 1,
+        "up": 4247,
+        "down": 1216
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-24": {
+      "date": "2026-07-24",
+      "metrics": {
+        "down_share": 0.8991,
+        "limit_down_n": 29,
+        "limit_up_n": 44,
+        "dt_ratio": 0.6591,
+        "broken_hi_n": 4,
+        "up": 554,
+        "down": 4936
+      },
+      "dim_levels": {
+        "down_share": "L5",
+        "limit_down_n": "L2",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "multi_dim",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-27": {
+      "date": "2026-07-27",
+      "metrics": {
+        "down_share": 0.0528,
+        "limit_down_n": 7,
+        "limit_up_n": 122,
+        "dt_ratio": 0.0574,
+        "broken_hi_n": 1,
+        "up": 5185,
+        "down": 289
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-28": {
+      "date": "2026-07-28",
+      "metrics": {
+        "down_share": 0.5168,
+        "limit_down_n": 63,
+        "limit_up_n": 67,
+        "dt_ratio": 0.9403,
+        "broken_hi_n": 3,
+        "up": 2594,
+        "down": 2774
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L4",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-29": {
+      "date": "2026-07-29",
+      "metrics": {
+        "down_share": 0.2225,
+        "limit_down_n": 14,
+        "limit_up_n": 85,
+        "dt_ratio": 0.1647,
+        "broken_hi_n": 3,
+        "up": 4246,
+        "down": 1215
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L1",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-30": {
+      "date": "2026-07-30",
+      "metrics": {
+        "down_share": 0.6741,
+        "limit_down_n": 99,
+        "limit_up_n": 57,
+        "dt_ratio": 1.7368,
+        "broken_hi_n": 2,
+        "up": 1759,
+        "down": 3639
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L5",
+        "dt_ratio": "L4",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-07-31": {
+      "date": "2026-07-31",
+      "metrics": {
+        "down_share": 0.1356,
+        "limit_down_n": 0,
+        "limit_up_n": 104,
+        "dt_ratio": 0.0,
+        "broken_hi_n": 1,
+        "up": 4680,
+        "down": 734
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-08-03": {
+      "date": "2026-08-03",
+      "metrics": {
+        "down_share": 0.2688,
+        "limit_down_n": 9,
+        "limit_up_n": 82,
+        "dt_ratio": 0.1098,
+        "broken_hi_n": 0,
+        "up": 3997,
+        "down": 1469
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-08-04": {
+      "date": "2026-08-04",
+      "metrics": {
+        "down_share": 0.3245,
+        "limit_down_n": 1,
+        "limit_up_n": 141,
+        "dt_ratio": 0.0071,
+        "broken_hi_n": 1,
+        "up": 3637,
+        "down": 1747
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-08-05": {
+      "date": "2026-08-05",
+      "metrics": {
+        "down_share": 0.3037,
+        "limit_down_n": 2,
+        "limit_up_n": 108,
+        "dt_ratio": 0.0185,
+        "broken_hi_n": 6,
+        "up": 3719,
+        "down": 1622
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L4"
+      },
+      "severity_level": "L4",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-08-06": {
+      "date": "2026-08-06",
+      "metrics": {
+        "down_share": 0.4817,
+        "limit_down_n": 4,
+        "limit_up_n": 83,
+        "dt_ratio": 0.0482,
+        "broken_hi_n": 3,
+        "up": 2785,
+        "down": 2588
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-08-07": {
+      "date": "2026-08-07",
+      "metrics": {
+        "down_share": 0.471,
+        "limit_down_n": 5,
+        "limit_up_n": 77,
+        "dt_ratio": 0.0649,
+        "broken_hi_n": 8,
+        "up": 2849,
+        "down": 2537
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L5"
+      },
+      "severity_level": "L5",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-08-10": {
+      "date": "2026-08-10",
+      "metrics": {
+        "down_share": 0.255,
+        "limit_down_n": 9,
+        "limit_up_n": 103,
+        "dt_ratio": 0.0874,
+        "broken_hi_n": 5,
+        "up": 4063,
+        "down": 1391
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L3"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-08-11": {
+      "date": "2026-08-11",
+      "metrics": {
+        "down_share": 0.7017,
+        "limit_down_n": 4,
+        "limit_up_n": 60,
+        "dt_ratio": 0.0667,
+        "broken_hi_n": 2,
+        "up": 1606,
+        "down": 3778
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-08-12": {
+      "date": "2026-08-12",
+      "metrics": {
+        "down_share": 0.2367,
+        "limit_down_n": 0,
+        "limit_up_n": 96,
+        "dt_ratio": 0.0,
+        "broken_hi_n": 1,
+        "up": 4124,
+        "down": 1279
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-08-13": {
+      "date": "2026-08-13",
+      "metrics": {
+        "down_share": 0.7914,
+        "limit_down_n": 4,
+        "limit_up_n": 63,
+        "dt_ratio": 0.0635,
+        "broken_hi_n": 3,
+        "up": 1138,
+        "down": 4318
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-08-14": {
+      "date": "2026-08-14",
+      "metrics": {
+        "down_share": 0.5534,
+        "limit_down_n": 16,
+        "limit_up_n": 64,
+        "dt_ratio": 0.25,
+        "broken_hi_n": 8,
+        "up": 2397,
+        "down": 2970
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L5"
+      },
+      "severity_level": "L5",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-08-17": {
+      "date": "2026-08-17",
+      "metrics": {
+        "down_share": 0.1967,
+        "limit_down_n": 1,
+        "limit_up_n": 110,
+        "dt_ratio": 0.0091,
+        "broken_hi_n": 3,
+        "up": 4333,
+        "down": 1061
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-08-18": {
+      "date": "2026-08-18",
+      "metrics": {
+        "down_share": 0.6082,
+        "limit_down_n": 9,
+        "limit_up_n": 81,
+        "dt_ratio": 0.1111,
+        "broken_hi_n": 4,
+        "up": 2119,
+        "down": 3289
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-08-19": {
+      "date": "2026-08-19",
+      "metrics": {
+        "down_share": 0.9191,
+        "limit_down_n": 148,
+        "limit_up_n": 38,
+        "dt_ratio": 3.8947,
+        "broken_hi_n": 5,
+        "up": 446,
+        "down": 5066
+      },
+      "dim_levels": {
+        "down_share": "L5",
+        "limit_down_n": "L5",
+        "dt_ratio": "L5",
+        "broken_hi_n": "L3"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-08-20": {
+      "date": "2026-08-20",
+      "metrics": {
+        "down_share": 0.2482,
+        "limit_down_n": 16,
+        "limit_up_n": 84,
+        "dt_ratio": 0.1905,
+        "broken_hi_n": 2,
+        "up": 4089,
+        "down": 1350
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-08-21": {
+      "date": "2026-08-21",
+      "metrics": {
+        "down_share": 0.5338,
+        "limit_down_n": 16,
+        "limit_up_n": 58,
+        "dt_ratio": 0.2759,
+        "broken_hi_n": 1,
+        "up": 2500,
+        "down": 2863
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-08-24": {
+      "date": "2026-08-24",
+      "metrics": {
+        "down_share": 0.7315,
+        "limit_down_n": 20,
+        "limit_up_n": 49,
+        "dt_ratio": 0.4082,
+        "broken_hi_n": 1,
+        "up": 1456,
+        "down": 3966
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L1",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-08-25": {
+      "date": "2026-08-25",
+      "metrics": {
+        "down_share": 0.2272,
+        "limit_down_n": 4,
+        "limit_up_n": 70,
+        "dt_ratio": 0.0571,
+        "broken_hi_n": 2,
+        "up": 4232,
+        "down": 1244
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-08-26": {
+      "date": "2026-08-26",
+      "metrics": {
+        "down_share": 0.4544,
+        "limit_down_n": 2,
+        "limit_up_n": 57,
+        "dt_ratio": 0.0351,
+        "broken_hi_n": 2,
+        "up": 2941,
+        "down": 2449
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-08-27": {
+      "date": "2026-08-27",
+      "metrics": {
+        "down_share": 0.3649,
+        "limit_down_n": 3,
+        "limit_up_n": 79,
+        "dt_ratio": 0.038,
+        "broken_hi_n": 0,
+        "up": 3388,
+        "down": 1947
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-08-28": {
+      "date": "2026-08-28",
+      "metrics": {
+        "down_share": 0.4428,
+        "limit_down_n": 3,
+        "limit_up_n": 83,
+        "dt_ratio": 0.0361,
+        "broken_hi_n": 3,
+        "up": 3008,
+        "down": 2390
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-08-31": {
+      "date": "2026-08-31",
+      "metrics": {
+        "down_share": 0.4114,
+        "limit_down_n": 13,
+        "limit_up_n": 89,
+        "dt_ratio": 0.1461,
+        "broken_hi_n": 4,
+        "up": 3177,
+        "down": 2221
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L1",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-09-01": {
+      "date": "2026-09-01",
+      "metrics": {
+        "down_share": 0.3765,
+        "limit_down_n": 1,
+        "limit_up_n": 86,
+        "dt_ratio": 0.0116,
+        "broken_hi_n": 4,
+        "up": 3381,
+        "down": 2042
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-09-02": {
+      "date": "2026-09-02",
+      "metrics": {
+        "down_share": 0.7169,
+        "limit_down_n": 11,
+        "limit_up_n": 55,
+        "dt_ratio": 0.2,
+        "broken_hi_n": 6,
+        "up": 1540,
+        "down": 3899
+      },
+      "dim_levels": {
+        "down_share": "L2",
+        "limit_down_n": "L0",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L4"
+      },
+      "severity_level": "L4",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-09-03": {
+      "date": "2026-09-03",
+      "metrics": {
+        "down_share": 0.6602,
+        "limit_down_n": 18,
+        "limit_up_n": 46,
+        "dt_ratio": 0.3913,
+        "broken_hi_n": 4,
+        "up": 1839,
+        "down": 3573
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L1",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-09-04": {
+      "date": "2026-09-04",
+      "metrics": {
+        "down_share": 0.5444,
+        "limit_down_n": 12,
+        "limit_up_n": 41,
+        "dt_ratio": 0.2927,
+        "broken_hi_n": 2,
+        "up": 2440,
+        "down": 2916
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-09-07": {
+      "date": "2026-09-07",
+      "metrics": {
+        "down_share": 0.4102,
+        "limit_down_n": 3,
+        "limit_up_n": 95,
+        "dt_ratio": 0.0316,
+        "broken_hi_n": 0,
+        "up": 3161,
+        "down": 2198
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-09-08": {
+      "date": "2026-09-08",
+      "metrics": {
+        "down_share": 0.3727,
+        "limit_down_n": 3,
+        "limit_up_n": 75,
+        "dt_ratio": 0.04,
+        "broken_hi_n": 1,
+        "up": 3414,
+        "down": 2028
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-09-09": {
+      "date": "2026-09-09",
+      "metrics": {
+        "down_share": 0.671,
+        "limit_down_n": 10,
+        "limit_up_n": 50,
+        "dt_ratio": 0.2,
+        "broken_hi_n": 5,
+        "up": 1787,
+        "down": 3645
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L0",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L3"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-09-10": {
+      "date": "2026-09-10",
+      "metrics": {
+        "down_share": 0.8263,
+        "limit_down_n": 16,
+        "limit_up_n": 40,
+        "dt_ratio": 0.4,
+        "broken_hi_n": 4,
+        "up": 949,
+        "down": 4516
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L1",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-09-11": {
+      "date": "2026-09-11",
+      "metrics": {
+        "down_share": 0.884,
+        "limit_down_n": 24,
+        "limit_up_n": 40,
+        "dt_ratio": 0.6,
+        "broken_hi_n": 2,
+        "up": 639,
+        "down": 4870
+      },
+      "dim_levels": {
+        "down_share": "L5",
+        "limit_down_n": "L2",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "multi_dim",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-09-14": {
+      "date": "2026-09-14",
+      "metrics": {
+        "down_share": 0.4159,
+        "limit_down_n": 20,
+        "limit_up_n": 58,
+        "dt_ratio": 0.3448,
+        "broken_hi_n": 2,
+        "up": 3124,
+        "down": 2224
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-09-15": {
+      "date": "2026-09-15",
+      "metrics": {
+        "down_share": 0.7966,
+        "limit_down_n": 35,
+        "limit_up_n": 32,
+        "dt_ratio": 1.0938,
+        "broken_hi_n": 2,
+        "up": 1118,
+        "down": 4379
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L3",
+        "dt_ratio": "L4",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "multi_dim",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-09-16": {
+      "date": "2026-09-16",
+      "metrics": {
+        "down_share": 0.2231,
+        "limit_down_n": 5,
+        "limit_up_n": 91,
+        "dt_ratio": 0.0549,
+        "broken_hi_n": 2,
+        "up": 4162,
+        "down": 1195
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-09-17": {
+      "date": "2026-09-17",
+      "metrics": {
+        "down_share": 0.5233,
+        "limit_down_n": 2,
+        "limit_up_n": 50,
+        "dt_ratio": 0.04,
+        "broken_hi_n": 2,
+        "up": 2571,
+        "down": 2822
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-09-18": {
+      "date": "2026-09-18",
+      "metrics": {
+        "down_share": 0.2154,
+        "limit_down_n": 1,
+        "limit_up_n": 84,
+        "dt_ratio": 0.0119,
+        "broken_hi_n": 2,
+        "up": 4226,
+        "down": 1160
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-09-21": {
+      "date": "2026-09-21",
+      "metrics": {
+        "down_share": 0.1716,
+        "limit_down_n": 4,
+        "limit_up_n": 107,
+        "dt_ratio": 0.0374,
+        "broken_hi_n": 1,
+        "up": 4533,
+        "down": 939
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-09-22": {
+      "date": "2026-09-22",
+      "metrics": {
+        "down_share": 0.562,
+        "limit_down_n": 7,
+        "limit_up_n": 65,
+        "dt_ratio": 0.1077,
+        "broken_hi_n": 5,
+        "up": 2366,
+        "down": 3036
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L3"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-09-23": {
+      "date": "2026-09-23",
+      "metrics": {
+        "down_share": 0.6555,
+        "limit_down_n": 21,
+        "limit_up_n": 51,
+        "dt_ratio": 0.4118,
+        "broken_hi_n": 5,
+        "up": 1879,
+        "down": 3576
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L1",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L3"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-09-24": {
+      "date": "2026-09-24",
+      "metrics": {
+        "down_share": 0.7948,
+        "limit_down_n": 18,
+        "limit_up_n": 52,
+        "dt_ratio": 0.3462,
+        "broken_hi_n": 5,
+        "up": 1113,
+        "down": 4311
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L3"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-09-28": {
+      "date": "2026-09-28",
+      "metrics": {
+        "down_share": 0.8355,
+        "limit_down_n": 65,
+        "limit_up_n": 35,
+        "dt_ratio": 1.8571,
+        "broken_hi_n": 4,
+        "up": 897,
+        "down": 4555
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L4",
+        "dt_ratio": "L4",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-09-29": {
+      "date": "2026-09-29",
+      "metrics": {
+        "down_share": 0.3595,
+        "limit_down_n": 13,
+        "limit_up_n": 57,
+        "dt_ratio": 0.2281,
+        "broken_hi_n": 2,
+        "up": 3460,
+        "down": 1942
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-09-30": {
+      "date": "2026-09-30",
+      "metrics": {
+        "down_share": 0.5255,
+        "limit_down_n": 14,
+        "limit_up_n": 58,
+        "dt_ratio": 0.2414,
+        "broken_hi_n": 1,
+        "up": 2557,
+        "down": 2832
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-10-08": {
+      "date": "2026-10-08",
+      "metrics": {
+        "down_share": 0.6885,
+        "limit_down_n": 18,
+        "limit_up_n": 48,
+        "dt_ratio": 0.375,
+        "broken_hi_n": 3,
+        "up": 1696,
+        "down": 3749
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L1",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-10-09": {
+      "date": "2026-10-09",
+      "metrics": {
+        "down_share": 0.3944,
+        "limit_down_n": 12,
+        "limit_up_n": 72,
+        "dt_ratio": 0.1667,
+        "broken_hi_n": 3,
+        "up": 3294,
+        "down": 2145
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-10-12": {
+      "date": "2026-10-12",
+      "metrics": {
+        "down_share": 0.7877,
+        "limit_down_n": 32,
+        "limit_up_n": 48,
+        "dt_ratio": 0.6667,
+        "broken_hi_n": 1,
+        "up": 1166,
+        "down": 4325
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L3",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-10-13": {
+      "date": "2026-10-13",
+      "metrics": {
+        "down_share": 0.4613,
+        "limit_down_n": 12,
+        "limit_up_n": 71,
+        "dt_ratio": 0.169,
+        "broken_hi_n": 3,
+        "up": 2905,
+        "down": 2488
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-10-14": {
+      "date": "2026-10-14",
+      "metrics": {
+        "down_share": 0.8221,
+        "limit_down_n": 14,
+        "limit_up_n": 39,
+        "dt_ratio": 0.359,
+        "broken_hi_n": 2,
+        "up": 974,
+        "down": 4500
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L3",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-10-15": {
+      "date": "2026-10-15",
+      "metrics": {
+        "down_share": 0.9232,
+        "limit_down_n": 31,
+        "limit_up_n": 36,
+        "dt_ratio": 0.8611,
+        "broken_hi_n": 3,
+        "up": 425,
+        "down": 5111
+      },
+      "dim_levels": {
+        "down_share": "L5",
+        "limit_down_n": "L2",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "multi_dim",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-10-16": {
+      "date": "2026-10-16",
+      "metrics": {
+        "down_share": 0.3947,
+        "limit_down_n": 17,
+        "limit_up_n": 64,
+        "dt_ratio": 0.2656,
+        "broken_hi_n": 3,
+        "up": 3285,
+        "down": 2142
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L1",
+        "dt_ratio": "L1",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-10-19": {
+      "date": "2026-10-19",
+      "metrics": {
+        "down_share": 0.5796,
+        "limit_down_n": 28,
+        "limit_up_n": 50,
+        "dt_ratio": 0.56,
+        "broken_hi_n": 3,
+        "up": 2272,
+        "down": 3132
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L2",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-10-20": {
+      "date": "2026-10-20",
+      "metrics": {
+        "down_share": 0.3071,
+        "limit_down_n": 7,
+        "limit_up_n": 57,
+        "dt_ratio": 0.1228,
+        "broken_hi_n": 1,
+        "up": 3773,
+        "down": 1672
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-10-21": {
+      "date": "2026-10-21",
+      "metrics": {
+        "down_share": 0.6306,
+        "limit_down_n": 6,
+        "limit_up_n": 50,
+        "dt_ratio": 0.12,
+        "broken_hi_n": 3,
+        "up": 1974,
+        "down": 3370
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-10-22": {
+      "date": "2026-10-22",
+      "metrics": {
+        "down_share": 0.9037,
+        "limit_down_n": 64,
+        "limit_up_n": 33,
+        "dt_ratio": 1.9394,
+        "broken_hi_n": 2,
+        "up": 533,
+        "down": 4999
+      },
+      "dim_levels": {
+        "down_share": "L5",
+        "limit_down_n": "L4",
+        "dt_ratio": "L4",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-10-23": {
+      "date": "2026-10-23",
+      "metrics": {
+        "down_share": 0.1682,
+        "limit_down_n": 12,
+        "limit_up_n": 86,
+        "dt_ratio": 0.1395,
+        "broken_hi_n": 2,
+        "up": 4519,
+        "down": 914
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-10-26": {
+      "date": "2026-10-26",
+      "metrics": {
+        "down_share": 0.5838,
+        "limit_down_n": 27,
+        "limit_up_n": 59,
+        "dt_ratio": 0.4576,
+        "broken_hi_n": 2,
+        "up": 2251,
+        "down": 3157
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L2",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-10-27": {
+      "date": "2026-10-27",
+      "metrics": {
+        "down_share": 0.8907,
+        "limit_down_n": 34,
+        "limit_up_n": 44,
+        "dt_ratio": 0.7727,
+        "broken_hi_n": 3,
+        "up": 604,
+        "down": 4923
+      },
+      "dim_levels": {
+        "down_share": "L5",
+        "limit_down_n": "L3",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "multi_dim",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-10-28": {
+      "date": "2026-10-28",
+      "metrics": {
+        "down_share": 0.2298,
+        "limit_down_n": 12,
+        "limit_up_n": 75,
+        "dt_ratio": 0.16,
+        "broken_hi_n": 3,
+        "up": 4155,
+        "down": 1240
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-10-29": {
+      "date": "2026-10-29",
+      "metrics": {
+        "down_share": 0.8584,
+        "limit_down_n": 57,
+        "limit_up_n": 39,
+        "dt_ratio": 1.4615,
+        "broken_hi_n": 1,
+        "up": 780,
+        "down": 4728
+      },
+      "dim_levels": {
+        "down_share": "L4",
+        "limit_down_n": "L4",
+        "dt_ratio": "L4",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-10-30": {
+      "date": "2026-10-30",
+      "metrics": {
+        "down_share": 0.8377,
+        "limit_down_n": 103,
+        "limit_up_n": 49,
+        "dt_ratio": 2.102,
+        "broken_hi_n": 3,
+        "up": 892,
+        "down": 4603
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L5",
+        "dt_ratio": "L5",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-11-02": {
+      "date": "2026-11-02",
+      "metrics": {
+        "down_share": 0.1489,
+        "limit_down_n": 13,
+        "limit_up_n": 132,
+        "dt_ratio": 0.0985,
+        "broken_hi_n": 1,
+        "up": 4680,
+        "down": 819
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L1",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-11-03": {
+      "date": "2026-11-03",
+      "metrics": {
+        "down_share": 0.6112,
+        "limit_down_n": 26,
+        "limit_up_n": 52,
+        "dt_ratio": 0.5,
+        "broken_hi_n": 3,
+        "up": 2106,
+        "down": 3310
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L2",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-11-04": {
+      "date": "2026-11-04",
+      "metrics": {
+        "down_share": 0.1432,
+        "limit_down_n": 15,
+        "limit_up_n": 127,
+        "dt_ratio": 0.1181,
+        "broken_hi_n": 3,
+        "up": 4666,
+        "down": 780
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L1",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-11-05": {
+      "date": "2026-11-05",
+      "metrics": {
+        "down_share": 0.1141,
+        "limit_down_n": 3,
+        "limit_up_n": 86,
+        "dt_ratio": 0.0349,
+        "broken_hi_n": 4,
+        "up": 4867,
+        "down": 627
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L2"
+      },
+      "severity_level": "L2",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-11-06": {
+      "date": "2026-11-06",
+      "metrics": {
+        "down_share": 0.8625,
+        "limit_down_n": 17,
+        "limit_up_n": 33,
+        "dt_ratio": 0.5152,
+        "broken_hi_n": 0,
+        "up": 756,
+        "down": 4742
+      },
+      "dim_levels": {
+        "down_share": "L4",
+        "limit_down_n": "L1",
+        "dt_ratio": "L2",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L4",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-11-09": {
+      "date": "2026-11-09",
+      "metrics": {
+        "down_share": 0.5842,
+        "limit_down_n": 2,
+        "limit_up_n": 58,
+        "dt_ratio": 0.0345,
+        "broken_hi_n": 7,
+        "up": 2241,
+        "down": 3149
+      },
+      "dim_levels": {
+        "down_share": "L1",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L5"
+      },
+      "severity_level": "L5",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-11-10": {
+      "date": "2026-11-10",
+      "metrics": {
+        "down_share": 0.2132,
+        "limit_down_n": 3,
+        "limit_up_n": 95,
+        "dt_ratio": 0.0316,
+        "broken_hi_n": 1,
+        "up": 4267,
+        "down": 1156
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-11-11": {
+      "date": "2026-11-11",
+      "metrics": {
+        "down_share": 0.3402,
+        "limit_down_n": 4,
+        "limit_up_n": 85,
+        "dt_ratio": 0.0471,
+        "broken_hi_n": 3,
+        "up": 3528,
+        "down": 1819
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L1",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-11-12": {
+      "date": "2026-11-12",
+      "metrics": {
+        "down_share": 0.8407,
+        "limit_down_n": 6,
+        "limit_up_n": 37,
+        "dt_ratio": 0.1622,
+        "broken_hi_n": 3,
+        "up": 878,
+        "down": 4632
+      },
+      "dim_levels": {
+        "down_share": "L4",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L4",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-11-13": {
+      "date": "2026-11-13",
+      "metrics": {
+        "down_share": 0.8616,
+        "limit_down_n": 48,
+        "limit_up_n": 38,
+        "dt_ratio": 1.2632,
+        "broken_hi_n": 5,
+        "up": 763,
+        "down": 4750
+      },
+      "dim_levels": {
+        "down_share": "L4",
+        "limit_down_n": "L3",
+        "dt_ratio": "L4",
+        "broken_hi_n": "L3"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:29:44",
+      "source": "auto"
+    },
+    "2026-11-17": {
+      "date": "2026-11-17",
+      "metrics": {
+        "down_share": 0.7573,
+        "limit_down_n": 82,
+        "limit_up_n": 38,
+        "dt_ratio": 2.1579,
+        "broken_hi_n": 3,
+        "up": 1321,
+        "down": 4123
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L4",
+        "dt_ratio": "L5",
+        "broken_hi_n": "L1"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-11-18": {
+      "date": "2026-11-18",
+      "metrics": {
+        "down_share": 0.7583,
+        "limit_down_n": 48,
+        "limit_up_n": 43,
+        "dt_ratio": 1.1163,
+        "broken_hi_n": 0,
+        "up": 1317,
+        "down": 4133
+      },
+      "dim_levels": {
+        "down_share": "L3",
+        "limit_down_n": "L3",
+        "dt_ratio": "L4",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L4",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.5,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-11-19": {
+      "date": "2026-11-19",
+      "metrics": {
+        "down_share": 0.8827,
+        "limit_down_n": 85,
+        "limit_up_n": 27,
+        "dt_ratio": 3.1481,
+        "broken_hi_n": 2,
+        "up": 648,
+        "down": 4876
+      },
+      "dim_levels": {
+        "down_share": "L5",
+        "limit_down_n": "L5",
+        "dt_ratio": "L5",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-11-20": {
+      "date": "2026-11-20",
+      "metrics": {
+        "down_share": 0.9436,
+        "limit_down_n": 84,
+        "limit_up_n": 30,
+        "dt_ratio": 2.8,
+        "broken_hi_n": 2,
+        "up": 313,
+        "down": 5235
+      },
+      "dim_levels": {
+        "down_share": "L5",
+        "limit_down_n": "L5",
+        "dt_ratio": "L5",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-11-23": {
+      "date": "2026-11-23",
+      "metrics": {
+        "down_share": 0.144,
+        "limit_down_n": 7,
+        "limit_up_n": 152,
+        "dt_ratio": 0.0461,
+        "broken_hi_n": 0,
+        "up": 4656,
+        "down": 783
+      },
+      "dim_levels": {
+        "down_share": "L0",
+        "limit_down_n": "L0",
+        "dt_ratio": "L0",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L0",
+      "is_ice": false,
+      "ice_type": null,
+      "size_factor": 1.0,
+      "detected_at": "2026-11-23T22:29:30",
+      "source": "auto"
+    }
+  },
+  "bounds_snapshot": {
+    "down_share": {
+      "P50": 0.5453,
+      "P70": 0.7006,
+      "P80": 0.757,
+      "P90": 0.8397,
+      "P95": 0.8818,
+      "n": 250,
+      "min": 0.0528,
+      "max": 0.945
+    },
+    "limit_down_n": {
+      "P50": 12.0,
+      "P70": 21.0,
+      "P80": 31.0,
+      "P90": 54.0,
+      "P95": 82.0,
+      "n": 250,
+      "min": 0.0,
+      "max": 289.0
+    },
+    "dt_ratio": {
+      "P50": 0.1754,
+      "P70": 0.36,
+      "P80": 0.56,
+      "P90": 1.0172,
+      "P95": 1.9394,
+      "n": 250,
+      "min": 0.0,
+      "max": 6.7647
+    },
+    "broken_hi_n": {
+      "P50": 2.0,
+      "P70": 3.0,
+      "P80": 4.0,
+      "P90": 5.0,
+      "P95": 6.0,
+      "n": 250,
+      "min": 0.0,
+      "max": 14.0
+    }
+  },
+  "drift_history": [
+    {
+      "at": "2026-11-23T22:28:09",
+      "anchor_n": 15,
+      "auto_n": 47,
+      "overlap_n": 8,
+      "anchor_hit_rate": 0.5333,
+      "window_days": 250
+    }
+  ]
+}

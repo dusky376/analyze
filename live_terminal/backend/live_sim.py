@@ -1175,9 +1175,10 @@ def sync(day: str | None = None, *, frames: list[dict[str, Any]] | None = None,
         # 旧实现 collect_two_board 是「全部二板都买」，方向与策略原意不符。
         gate = emotion_gate(day)
         # 市场级冰点闸门（用户 2026-11-23 裁定）：冰点不空仓，按系数缩减仓位。
+        # persist=True：命中即新增样本入库（用户裁定 B，与时俱进更新冰点库）。
         try:
             from backend import ice_gate
-            ice = ice_gate.assess(day)
+            ice = ice_gate.assess(day, persist=True)
         except Exception as exc:  # noqa: BLE001 - 冰点不可用不阻塞主流程
             ice = {"available": False, "is_ice": False, "size_factor": 1.0,
                    "level": None, "reason": f"{type(exc).__name__}: {exc}"}
@@ -1318,11 +1319,13 @@ def _ice_payload(day: str) -> dict[str, Any]:
             "available": bool(r.get("available")),
             "level": r.get("level"),
             "is_ice": bool(r.get("is_ice")),
+            "ice_type": r.get("ice_type"),
             "size_factor": r.get("size_factor"),
             "verdict": r.get("verdict"),
             "reasons": r.get("reasons") or [],
             "metrics": r.get("metrics"),
             "dim_levels": r.get("dim_levels"),
+            "sample": r.get("sample"),
             "caveat": r.get("caveat"),
         }
     except Exception as exc:  # noqa: BLE001

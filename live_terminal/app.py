@@ -37,7 +37,8 @@ import polars as pl
 from flask import Flask, Response, jsonify, request, send_from_directory
 
 from backend import (data_health, exit_alternatives, feeds, guitu_backtest, guitu_cases,
-                     leader_ladder, live_sim, market_clock, queue_match, recorder)
+                     ice_samples, leader_ladder, live_sim, market_clock, queue_match,
+                     recorder)
 from backend.json_safe import sanitize
 
 ROOT = Path(__file__).resolve().parent
@@ -237,6 +238,43 @@ def api_exit_alternatives() -> Response:
     """
     return api_guard(lambda: cached_copy("exit_alternatives", 300.0,
                                          exit_alternatives.analyze))
+
+
+@app.get("/api/ice-samples")
+def api_ice_samples() -> Response:
+    """冰点样本库（用户裁定 B：命中即新增样本）+ 漂移监控。
+
+    只读：返回 anchor（人工标注）/ auto（算法命中）统计与最近样本。
+    """
+    def _run() -> dict[str, Any]:
+        st = ice_samples.load()
+        dr = ice_samples.drift(st)
+        autos = st.get("auto_samples") or {}
+        recent = [autos[k] for k in sorted(autos)][-30:]
+        by_type: dict[str, int] = {}
+        for v in autos.values():
+            t = (v or {}).get("ice_type") or "unknown"
+            by_type[t] = by_type.get(t, 0) + 1
+        by_level: dict[str, int] = {}
+        for v in autos.values():
+            lv = (v or {}).get("severity_level") or "unknown"
+            by_level[lv] = by_level.get(lv, 0) + 1
+        return {
+            "available": True,
+            "version": st.get("version"),
+            "updated_at": st.get("updated_at"),
+            "auto_n": len(autos),
+            "history_n": len(st.get("history") or {}),
+            "anchor_n": dr["anchor_n"],
+            "by_ice_type": by_type,
+            "by_level": by_level,
+            "drift": dr,
+            "drift_history": (st.get("drift_history") or [])[-10:],
+            "recent": recent,
+            "note": ("anchor=人工标注、auto=算法命中；两者重合率即漂移指标。"
+                     "auto 样本参与分位校准（用户裁定 B），可按 source 回溯剔除。"),
+        }
+    return api_guard(lambda: cached_copy("ice_samples", 120.0, _run))
 
 
 @app.post("/api/refresh")

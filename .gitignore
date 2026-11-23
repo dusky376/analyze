@@ -71,3 +71,8 @@ live_terminal/data/intraday/
 
 # ---- 研究临时脚本/中间产物（结论已写进 md，脚本不入库） ----
 research_tmp/
+
+# 注：live_terminal/data/ice_samples.json **不忽略** ——
+# 其中 15 个人工 anchor 种子不可再生，必须随仓库保存；
+# 自动增长的 auto_samples 也一并入库，便于回溯与漂移审计。
+live_terminal/data/ice_samples.tmp.json
