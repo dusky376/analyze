@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updated_at": "2026-11-23T22:52:11",
+  "updated_at": "2026-11-23T23:10:24",
   "feature_note": null,
   "seeds": [
     {
@@ -111,7 +111,7 @@
       "is_ice": true,
       "ice_type": "both",
       "size_factor": 0.3,
-      "detected_at": "2026-11-23T22:28:09",
+      "detected_at": "2026-11-23T23:06:51",
       "source": "auto"
     },
     "2025-11-18": {
@@ -1119,7 +1119,7 @@
       "is_ice": true,
       "ice_type": "both",
       "size_factor": 0.5,
-      "detected_at": "2026-11-23T22:50:43",
+      "detected_at": "2026-11-23T23:09:59",
       "source": "auto"
     },
     "2026-11-17": {
@@ -1167,7 +1167,7 @@
       "is_ice": true,
       "ice_type": "both",
       "size_factor": 0.5,
-      "detected_at": "2026-11-23T22:28:09",
+      "detected_at": "2026-11-23T23:06:56",
       "source": "auto"
     },
     "2026-11-19": {
@@ -1241,7 +1241,7 @@
       "is_ice": true,
       "ice_type": "both",
       "size_factor": 0.3,
-      "detected_at": "2026-11-23T22:28:09",
+      "detected_at": "2026-11-23T23:06:51",
       "source": "auto"
     },
     "2025-11-12": {
@@ -7097,7 +7097,7 @@
       "is_ice": true,
       "ice_type": "both",
       "size_factor": 0.5,
-      "detected_at": "2026-11-23T22:50:43",
+      "detected_at": "2026-11-23T23:09:59",
       "source": "auto"
     },
     "2026-11-17": {
@@ -7145,7 +7145,7 @@
       "is_ice": true,
       "ice_type": "both",
       "size_factor": 0.5,
-      "detected_at": "2026-11-23T22:28:09",
+      "detected_at": "2026-11-23T23:06:56",
       "source": "auto"
     },
     "2026-11-19": {
@@ -7217,7 +7217,7 @@
       "is_ice": false,
       "ice_type": null,
       "size_factor": 1.0,
-      "detected_at": "2026-11-23T22:52:11",
+      "detected_at": "2026-11-23T23:10:24",
       "source": "auto"
     }
   },

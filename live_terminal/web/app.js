@@ -194,6 +194,8 @@ function renderTodayOrders(rows, day) {
       <td class="num">${fmtNum(o.entry_price)}</td>
       <td class="num">${fmtInt(o.qty)}</td>
       ${ratioCell(o)}
+      <td class="num muted" title="${esc(o.budget_reason || "")}">${
+        has(o.size_budget_yuan) ? fmtInt(o.size_budget_yuan) : (has(o.notional) ? fmtInt(o.notional) : "—")}</td>
       <td>${statusTag(o.status)}</td>
       <td class="muted">${esc(reason)}</td>
     </tr>`;
@@ -325,7 +327,10 @@ function renderExitAlternatives(d) {
   $("#exitAltBody").innerHTML = (d.trades || []).map((t) => {
     const ctx = t.context || {};
     const gate = ctx.gate_blocked === true ? "闸门拦截" : ctx.gate_blocked === false ? "闸门通过" : "闸门未知";
-    const high = has(ctx.high_avg_ret) ? `高标均涨 ${fmtPct(ctx.high_avg_ret)}` : "高标 —";
+    // high_avg_ret 后端是**百分数**（-0.37 表示 -0.37%），fmtPct 期望小数 → 必须 /100。
+    // 2026-11-23 修复：此前漏除，页面显示成 -37.00%（放大 100 倍）。
+    const high = has(ctx.high_avg_ret)
+      ? `高标均涨 ${fmtPct(Number(ctx.high_avg_ret) / 100)}` : "高标 —";
     const ld = has(ctx.high_limit_down_share) ? `跌停占比 ${(Number(ctx.high_limit_down_share) * 100).toFixed(0)}%` : "";
     const brk = ctx.break_is_limit_down === true ? "断板跌停" : ctx.break_is_limit_down === false ? "断板未跌停" : "断板 —";
     const envText = [gate, high, ld, brk].filter(Boolean).join(" · ");

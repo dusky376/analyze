@@ -87,11 +87,83 @@ EXIT_RULE = "首个未涨停日（断板）当日收盘卖出；断板后不持�
 # 实际成本率由 costs.DEFAULT.round_trip_rate() 计算，不在此硬编码百分比。
 COST_LABEL = "万0.84免五（佣金0.0084%/边·无最低5元·印花0.05%·过户0.001%·滑点15bp/边）"
 
-#: 单笔模拟买入金额上限（元）。对齐决策层「单笔 ≤10% / 单笔上限 10 万」口径。
-#: 用于把「价格」换算成「数量 × 金额」，账本因此有真实成交额字段。
-POSITION_SIZE_YUAN = 100_000.0
+# ============================ 仓位管理（用户 2026-11-23 裁定） ============================
+# 「钱只有一百万，仓位自行管理，冰点就降仓位」
+#
+# 设计：
+#   总资金 CAPITAL = 100 万
+#   常态单笔仓位    = 总资金 × 10%  = 10 万（与既有「单笔≤10%」口径一致）
+#   冰点降仓       = 单笔仓位 × size_factor（L5→0.30、L4→0.50）
+#   总仓上限       = 总资金 × 80%（留 20% 现金缓冲，不满仓）
+#
+# 为什么需要总仓上限：冰点日有多个题材同时命中时，单笔各自按 10% 下单
+# 可能超出总资金。这里用「可用资金 / 剩余候选数」做均分，保证不超杠杆。
+CAPITAL_YUAN = 1_000_000.0
+#: 常态单笔仓位占总资金比例（10% = 10 万）
+POSITION_PCT = 0.10
+#: 总仓上限占比（80%，留 20% 现金）
+MAX_GROSS_PCT = 0.80
+#: 常态单笔上限（元）= 100 万 × 10%
+POSITION_SIZE_YUAN = CAPITAL_YUAN * POSITION_PCT
 #: A 股最小交易单位（1 手 = 100 股），数量必须是它的整数倍。
 LOT_SIZE = 100
+
+
+def plan_orders(candidates: list[dict[str, Any]], *,
+                size_factor: float = 1.0,
+                capital: float = CAPITAL_YUAN,
+                held_notional: float = 0.0) -> list[dict[str, Any]]:
+    """给当日候选分配单笔金额（总资金 100 万、冰点降仓、总仓 80% 上限）。
+
+    Args:
+        candidates: 当日候选（`collect_guitu_targets` 的输出值，需要 first.price）
+        size_factor: 冰点仓位系数（L5=0.3 / L4=0.5 / 非冰点=1.0）
+        capital: 总资金（默认 100 万）
+        held_notional: 已持仓占用的金额（跨日仓位），用于计算可用资金
+
+    Returns:
+        每项 {"code", "size_yuan", "budget_reason"}，顺序与 candidates 一致。
+
+    分配规则（按优先级降级）：
+        1) 基准 = capital × 10% × size_factor
+        2) 可用资金 = capital × 80% − held_notional
+        3) 单笔不超过「可用资金 / 剩余待分配数」（均分，保证总仓不超限）
+        4) 不足 1 手时仍给 1 手（否则买不进），但标记 budget_reason
+    """
+    factor = max(0.0, min(1.0, float(size_factor or 1.0)))
+    gross_cap = capital * MAX_GROSS_PCT
+    available = max(0.0, gross_cap - max(0.0, float(held_notional or 0.0)))
+    base = capital * POSITION_PCT * factor
+
+    n = len(candidates)
+    if n == 0:
+        return []
+    out: list[dict[str, Any]] = []
+    remaining = available
+    for i, g in enumerate(candidates):
+        left_n = n - i
+        per_cap = remaining / left_n if left_n > 0 else 0.0
+        size_yuan = min(base, per_cap)
+        reason = []
+        if size_yuan < base - 1e-6:
+            reason.append(f"可用资金均分降至 {size_yuan:,.0f}")
+        if factor < 1.0:
+            reason.append(f"冰点降仓 ×{factor:.2f}")
+        # 至少 1 手成本，避免出现 "0 股"
+        price = None
+        try:
+            price = float((g.get("first") or {}).get("price"))
+        except (TypeError, ValueError):
+            price = None
+        min_lot_cost = (price * LOT_SIZE) if (price and price > 0) else 0.0
+        if size_yuan < min_lot_cost and min_lot_cost > 0:
+            size_yuan = min_lot_cost
+            reason.append("不足 1 手按 1 手")
+        out.append({"code": str(g.get("ts_code") or ""),
+                    "size_yuan": round(size_yuan, 2),
+                    "budget_reason": "；".join(reason) or "常态 10%"})
+        remaining = max(0.0, remaining - size_yuan)
+    return out
 
 
 def position_size(price: float | None,
@@ -289,7 +361,8 @@ def collect_two_board(frames: list[dict[str, Any]]) -> tuple[dict[str, dict[str,
 
 
 def build_order(day: str, code: str, g: dict[str, Any], *,
-                size_factor: float = 1.0) -> dict[str, Any]:
+                size_factor: float = 1.0,
+                size_yuan: float | None = None) -> dict[str, Any]:
     """生成**挂单**（不判成交）。
 
     2026-11-16 修复未来函数：旧实现用 `g["broken_max"]`（全天最大开板次数）
@@ -300,6 +373,8 @@ def build_order(day: str, code: str, g: dict[str, Any], *,
     Args:
         size_factor: 仓位系数（冰点小仓试错，见 `ice_gate.size_factor`）。
                      只缩放单笔买入金额，不改变选股、成交判定与买卖点。
+        size_yuan: 显式指定本笔买入金额（由 :func:`plan_orders` 按总资金
+                   与总仓上限分配）。给出时优先于 `size_factor` 的默认计算。
     """
     first = g["first"]
     b0 = first.get("broken")
@@ -354,10 +429,11 @@ def build_order(day: str, code: str, g: dict[str, Any], *,
         "seal_fund": g["last"].get("seal_fund"),
     }
     # 2026-11-17：把价格换算成「数量 × 成交额」，成本模型才能计入最低 5 元佣金。
-    # 2026-11-23：冰点时按 size_factor 缩放单笔金额（小仓试错，不改买卖点）。
+    # 2026-11-23：冰点降仓 + 总资金 100 万预算；size_yuan 显式给出时优先。
     factor = max(0.0, min(1.0, float(size_factor or 1.0)))
-    size_yuan = POSITION_SIZE_YUAN * factor
-    qty, notional = position_size(first.get("price"), size_yuan=size_yuan)
+    budget = (float(size_yuan) if size_yuan is not None and float(size_yuan) > 0
+              else POSITION_SIZE_YUAN * factor)
+    qty, notional = position_size(first.get("price"), size_yuan=budget)
     return {
         "id": f"{day}|{code}|B1",
         "day": day, "strategy": STRATEGY,
@@ -367,8 +443,10 @@ def build_order(day: str, code: str, g: dict[str, Any], *,
         # 数量与成交额：让 settle 的成本口径能计入最低 5 元佣金
         "qty": qty, "notional": notional,
         "size_factor": factor,
-        "notional_basis": (f"单笔上限 {size_yuan:,.0f} 元（冰点系数 {factor:.2f}）："
-                           f"qty=floor({size_yuan:,.0f}/(价×100))×100"),
+        "size_budget_yuan": round(budget, 2),
+        "notional_basis": (f"预算 {budget:,.0f} 元（总资金 {CAPITAL_YUAN:,.0f}"
+                           f"×{POSITION_PCT:.0%}×系数 {factor:.2f}）："
+                           f"qty=floor({budget:,.0f}/(价×100))×100"),
         "entry_frame_ts": g["frame_ts"],
         "entry_rule": ENTRY_RULE, "exit_rule": EXIT_RULE,
         "queue": q,
@@ -1232,10 +1310,27 @@ def sync(day: str | None = None, *, frames: list[dict[str, Any]] | None = None,
             notes.append(f"{day} 无涨停池留档帧；本日不产生任何委托单（不补数、不猜测）。")
 
         # 1) 委托单：新单 or 更新已有单的开板状态（单向迁移）
+        # 2026-11-23：按「总资金 100 万 / 冰点降仓 / 总仓 80% 上限」统一分配单笔金额。
+        held = sum(float(p.get("notional") or 0.0)
+                   for p in state["positions"].values()
+                   if p.get("status") != "closed")
+        budget = plan_orders(list(groups.values()), size_factor=size_factor,
+                             held_notional=held)
+        size_by_code = {b["code"]: b for b in budget}
+        if groups:
+            total_plan = sum(b["size_yuan"] for b in budget)
+            notes.append(
+                f"仓位分配：总资金 {CAPITAL_YUAN:,.0f} 元、已持仓 {held:,.0f} 元、"
+                f"本次计划 {total_plan:,.0f} 元（系数 {size_factor:.2f}，"
+                f"总仓上限 {MAX_GROSS_PCT:.0%}）")
         for code, g in groups.items():
             oid = f"{day}|{code}|B1"
             cur = state["orders"].get(oid)
-            new = build_order(day, code, g, size_factor=size_factor)
+            b = size_by_code.get(code) or {}
+            new = build_order(day, code, g, size_factor=size_factor,
+                              size_yuan=b.get("size_yuan"))
+            if b:
+                new["budget_reason"] = b.get("budget_reason")
             if cur is None:
                 state["orders"][oid] = new
                 cur = new

@@ -175,10 +175,15 @@ td.empty { text-align: center; color: var(--muted); padding: 26px; }
 .summary-chip b { color: var(--gold2); font-size: 15px; margin-left: 6px; }
 
 .thesis { display: grid; gap: 10px; }
-.thesis .status {
+.thesis .status,
+.status {
+  /* 2026-11-23：原来只定义 .thesis .status，导致冰点/情绪卡片的
+     <div class="status"> 样式静默丢失（不报错、只是变朴素）。改为全局生效。 */
   border: 1px solid rgba(216,168,78,.3); background: rgba(216,168,78,.06);
   border-radius: 12px; padding: 14px 16px; font-size: 13px; color: #ead9b4;
 }
+.env-group .status { padding: 9px 12px; margin-bottom: 8px; display: flex;
+  align-items: center; gap: 8px; flex-wrap: wrap; }
 .check {
   border-left: 3px solid var(--line2); padding: 7px 12px; background: rgba(255,255,255,.012);
   border-radius: 0 9px 9px 0; font-size: 13px;
