@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updated_at": "2026-11-23T22:51:12",
+  "updated_at": "2026-11-23T22:52:11",
   "feature_note": null,
   "seeds": [
     {
@@ -7217,7 +7217,7 @@
       "is_ice": false,
       "ice_type": null,
       "size_factor": 1.0,
-      "detected_at": "2026-11-23T22:51:12",
+      "detected_at": "2026-11-23T22:52:11",
       "source": "auto"
     }
   },
