@@ -12,7 +12,10 @@
 2. 新增逐腿接口 `leg_fee` / `round_trip_fee` / `round_trip_rate(sell_notional=)`
    / `round_trip_rate_for_return` 与手工逐腿一致；
 3. 平价（买卖同额）时两者**完全相等**（证明旧口径只在盈亏时才有偏差）；
-4. 最低 5 元佣金、印花税只在卖出腿等边界。
+4. 最低 5 元佣金、印花税只在卖出腿等边界（锁在 LEGACY_DEFAULT）。
+
+当前 B1 口径（用户 2026-11-23 裁定）为万0.84免五 = N(costs.DEFAULT)，
+见文件末尾 TestNewDefaultCostWan084 的专项断言。
 """
 from __future__ import annotations
 
@@ -26,7 +29,10 @@ sys.path.insert(0, str(ROOT))
 
 from backend import costs  # noqa: E402
 
-M = costs.DEFAULT
+#: 历史口径（万2.5+最低5元）——下面这些"逐位不变"的断言锁的是它。
+#: 当前 B1 结算口径是万0.84免五（costs.DEFAULT），另有专门测试。
+M = costs.LEGACY_DEFAULT
+N = costs.DEFAULT
 
 
 # ---------------------------------------------------------------------------
@@ -183,3 +189,30 @@ def test_describe_keeps_old_keys_and_adds_exact() -> None:
     assert d["exact_flat_rate"] == pytest.approx(M.round_trip_rate(20000.0))
     assert d["exact_flat_fee"] == pytest.approx(80.4)
     assert "向后兼容" in d["round_trip_rate_basis"]
+
+
+# ---------------------------------------------------------------------------
+# 7) 当前 B1 口径：万 0.84 免五（用户 2026-11-23 裁定，单一口径）
+# ---------------------------------------------------------------------------
+
+class TestNewDefaultCostWan084:
+    """万0.84免五：佣金 0.000084/边、无最低佣金。"""
+
+    EXPECTED_RATE = 0.000084 * 2 + 0.0005 + 0.00001 * 2 + 0.0015 * 2  # 0.003688
+
+    def test_rate_is_flat_regardless_of_notional(self) -> None:
+        for n in (None, 0, 1, 100, 1234, 5000, 20000, 100000):
+            assert N.round_trip_rate(n) == pytest.approx(self.EXPECTED_RATE, abs=1e-12)
+
+    def test_no_minimum_commission(self) -> None:
+        assert N.min_commission == 0.0
+        assert N.leg_fee_detail(100.0, sell=False)["commission"] == pytest.approx(0.0084)
+        assert N.leg_fee_detail(1_000_000.0, sell=False)["commission"] == pytest.approx(84.0)
+
+    def test_stamp_only_on_sell(self) -> None:
+        assert N.leg_fee_detail(100000.0, sell=False)["stamp"] == 0.0
+        assert N.leg_fee_detail(100000.0, sell=True)["stamp"] == pytest.approx(50.0)
+
+    def test_legacy_is_still_old_rate(self) -> None:
+        assert M.commission_rate == 0.00025 and M.min_commission == 5.0
+        assert M.round_trip_rate(None) == pytest.approx(0.00402, abs=1e-12)

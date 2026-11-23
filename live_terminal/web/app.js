@@ -209,10 +209,11 @@ function renderPositions(d) {
 function renderCost(d) {
   const summary = d.summary || {};
   const by = summary.by_cost || {};
-  const labels = d.cost_variants || {};
+  const costLabel = d.cost_label || "万0.84免五";
+  // 单一口径：后端只返回一个以 cost_label 为 key 的聚合行。
   $("#costBody").innerHTML = Object.keys(by).length
     ? Object.entries(by).map(([k, v]) => `<tr>
-        <td>${esc(k)} <span class="code">${labels[k] ? fmtPct(labels[k]) : ""}</span></td>
+        <td>${esc(k)} <span class="code">${esc(d.cost_rate != null ? fmtPct(d.cost_rate) : "")}</span></td>
         <td class="num">${fmtInt(v.n)}</td>
         <td class="num">${fmtPct(v.win_rate)}</td>
         <td class="num ${cls(v.gross_mean)}">${fmtPct(v.gross_mean)}</td>
@@ -270,44 +271,6 @@ function renderGuitu(g) {
     "<li>暂无边界声明。</li>";
 }
 
-/* ------------------------------------------------------------------ cases */
-function renderGuituCases(d) {
-  $("#caseMeta").textContent =
-    `面板 ${esc(d.panel_last || "—")} · 案例 ${fmtInt((d.groups || []).length)} 组 · ` +
-    `实时快照 ${esc(fmtDay(d.live_snapshot?.day))}`;
-  const th = d.thesis || {};
-  const thesis = $("#thesis");
-  thesis.innerHTML =
-    `<div class="status"><b>命题：</b>${esc(th.statement || "—")}<br><b>结论：</b>${esc(th.status || "—")}</div>` +
-    (th.checks || []).map((c) => `<div class="check">
-      <span class="verdict">${esc(c.verdict || "")}</span>
-      <b>${esc(c.item || "")}</b>
-      <p>${esc(c.evidence || "")}</p>
-    </div>`).join("");
-
-  const wrap = $("#caseGroups");
-  wrap.innerHTML = (d.groups || []).map((g) => {
-    const members = g.members_payload || [];
-    return `<div class="case-card">
-      <h4>${esc(g.title || g.theme || "")} ${g.live ? '<span class="tag unfilled">实时关注</span>' : ""}</h4>
-      <div class="meta">${esc(g.note || "")}</div>
-      ${members.map((m) => `<div class="member">
-        <span>${roleTag(m.role, m.role_cn)}</span>
-        <span class="who">${esc(m.name || "")} <span class="code">${esc(m.ts_code || "")}</span></span>
-        <span class="why">${esc(m.available === false ? (m.reason || m.proxy || "日线未收盘") :
-          `单波 ${fmtPct(m.single?.peak_gain)} · 断板后5日 ${fmtPct(m.single?.after_break_5d)}`)}</span>
-      </div>`).join("")}
-    </div>`;
-  }).join("") || `<div class="case-card"><div class="empty-card">暂无案例。</div></div>`;
-
-  $("#bullPeriods").innerHTML = (d.bull_periods || []).map((p) =>
-    `<span class="chip">${esc(p.name)} <small>${esc(p.start)} → ${esc(p.end)} · ${esc(p.kind || "")}</small></span>`
-  ).join("") || `<span class="muted">暂无历史高标周期。</span>`;
-
-  $("#caseCaveats").innerHTML = (d.caveats || []).map((x) => `<li>${esc(x)}</li>`).join("") ||
-    "<li>暂无边界声明。</li>";
-}
-
 /* ------------------------------------------------------------------- load */
 async function loadAll(manual = false) {
   const btn = $("#refreshBtn");
@@ -316,16 +279,14 @@ async function loadAll(manual = false) {
     if (manual) {
       await fetch("/api/refresh", { method: "POST" });
     }
-    const [health, live, guitu, cases] = await Promise.all([
+    const [health, live, guitu] = await Promise.all([
       getJSON("/api/health", 30000).catch(() => null),
       getJSON("/api/live-sim", 90000),
       getJSON("/api/guitu", 60000).catch(() => null),
-      getJSON("/api/guitu-cases", 120000).catch(() => null),
     ]);
     renderHealth(health);
     renderLiveSim(live);
     if (guitu) renderGuitu(guitu);
-    if (cases && cases.available) renderGuituCases(cases);
     $("#footerMeta").textContent =
       `${live.strategy || "悟空真经"} · 账本生成 ${live.generated_at || "—"} · 页面刷新 ${new Date().toLocaleTimeString("zh-CN")}`;
   } catch (err) {

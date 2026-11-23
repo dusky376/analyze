@@ -4,7 +4,7 @@
 - 不假设排到就成交；一字/未开板/开板次数缺失一律不建仓
 - 断板结算只用真实日线收盘价，日线未落盘不猜价
 - 单向状态迁移 + 幂等，重复 sync 不重复开仓/结算
-- 成本三口径并列，不擅自裁定
+- 成本单一口径：万0.84免五（用户 2026-11-23 裁定）
 """
 from __future__ import annotations
 
@@ -207,7 +207,7 @@ def test_find_exit_pending_and_censored() -> None:
         ("20261113", 10.0, True), ("20261114", 11.0, True)))[1] == "censored"
 
 
-def test_settle_uses_real_close_and_all_three_costs() -> None:
+def test_settle_uses_real_close_and_single_cost_wan084() -> None:
     pos = {"id": "x", "entry_date": "20261113", "entry_price": 10.0,
            "status": "holding"}
     out = live_sim.settle(pos, _daily(
@@ -217,8 +217,11 @@ def test_settle_uses_real_close_and_all_three_costs() -> None:
     assert out["exit_date"] == "20261117" and out["exit_price"] == 11.5
     assert out["gross_return"] == pytest.approx(0.15)
     assert out["board_days"] == 1
-    assert set(out["net_by_cost"]) == set(live_sim.COST_VARIANTS)
-    assert out["net_by_cost"]["0.36%_papertrade"] == pytest.approx(0.1464)
+    # 单一口径（万0.84免五）：净收益 = 毛收益 − 0.003688
+    from backend import costs
+    assert out["net_return"] == pytest.approx(
+        0.15 - costs.DEFAULT.round_trip_rate(), abs=1e-6)
+    assert "net_by_cost" not in out          # 三口径已移除
     assert pos["status"] == "holding"          # 不改入参
 
 

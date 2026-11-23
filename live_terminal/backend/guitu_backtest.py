@@ -4,7 +4,7 @@
 ------------------------------------------------
 ① 断板卖出 = **断板当日收盘**（不是断板次日）。
 ② 买点 = **二板当日涨停瞬间排板**（不是收盘价默认成交）。
-⑥ 成本口径暂不决定 → 0.26% 与 0.36% 并列，不替用户选、不混用。
+⑥ 成本口径（用户 2026-11-23 裁定）→ 万 0.84 免五，单一口径；另列毛收益对照。
 
 排板买点的诚实边界
 ------------------------------------------------
@@ -32,13 +32,16 @@ from typing import Any
 import numpy as np
 import polars as pl
 
-from backend import feature_engine, feeds, queue_match
+from backend import costs, feature_engine, feeds, queue_match
 
 ROOT = Path(__file__).resolve().parents[1]
 
 OUT = ROOT / "data" / "guitu_sim.json"
-COST_MAIN = 0.0026          # STEP3-SIGN 裁定②
-COST_LEGACY = 0.0036        # 终端既有口径；裁定⑥未决定，两者并列
+
+#: 单一成本口径（用户 2026-11-23 裁定）：万0.84免五，见 costs.DEFAULT。
+#: 历史回放只有日线、无逐笔队列，成本按纯费率近似（不含逐腿差异）。
+COST_MAIN = round(costs.DEFAULT.round_trip_rate(), 6)   # ≈0.003688
+COST_GROSS = 0.0        # 毛收益对照（不含成本），仅参考
 
 
 def _arrays(df: pl.DataFrame) -> dict[str, Any]:
@@ -168,7 +171,7 @@ def build(panel: pl.DataFrame | None = None) -> dict[str, Any]:
 
     stats: dict[str, Any] = {}
     stats["龟兔·二板排板买入→断板当日收盘卖（主口径·假设排到的上界）"] = _stat(ev, "a", COST_MAIN)
-    stats["龟兔·成本0.36%并列（裁定⑥未定）"] = _stat(ev, "a", COST_LEGACY)
+    stats["龟兔·毛收益对照（不含成本，仅参考）"] = _stat(ev, "a", COST_GROSS)
     stats["对照B·次日开盘买（已否决·仅参考）"] = _stat(ev, "b", COST_MAIN)
     stats["对照C·断板次日开盘卖（已否决·仅参考）"] = _stat(ev, "c", COST_MAIN)
 
@@ -211,8 +214,8 @@ def build(panel: pl.DataFrame | None = None) -> dict[str, Any]:
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "panel_last": str(panel["trade_date"].max()),
         "panel_rows": panel.height,
-        "cost_main": COST_MAIN, "cost_legacy": COST_LEGACY,
-        "cost_status": "裁定⑥：暂不做决定；0.26%/笔 与 0.36% 并列，不替用户选",
+        "cost_main": COST_MAIN,
+        "cost_status": "用户2026-11-23裁定：万0.84免五，单一口径；历史回放按纯费率近似",
         "benchmark": "同日全市场等权收益（裁定②；本表收益为绝对收益，未减基准）",
         "definition": "二板（streak 1→2）封板瞬间挂涨停价排板 → 首个未涨停日（断板）当日收盘卖出",
         "entry_rule": "二板当日涨停瞬间以涨停价挂单排队（一字板确定买不进则跳过）",

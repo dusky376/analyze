@@ -43,7 +43,7 @@
    `pending_daily`，绝不拿盘中最新价冒充收盘价结算。
 4. 停牌 = 静默跨日（日线无行则跳过），并在 caveat 中说明。
 5. 到右端仍连板 = `censored` 右删失，不算盈利也不算亏损。
-6. 成本三口径（0.26% / 0.36% / 0.20% 每笔往返）**并列展示，不擅自裁定**。
+6. 成本单一口径：万 0.84 免五（用户 2026-11-23 裁定），见 `costs.DEFAULT`。
 7. 本模块只写本地 JSON 账本，**永不向任何账户/接口发送交易指令**。
 
 状态机
@@ -66,7 +66,7 @@ from typing import Any
 import numpy as np
 import polars as pl
 
-from backend import feature_engine, guitu_roles, queue_match
+from backend import costs, feature_engine, guitu_roles, queue_match
 
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "data"
@@ -82,16 +82,12 @@ STRATEGY = "B1 悟空真经·二板排板"
 ENTRY_RULE = "二板封板瞬间挂涨停价限价委托排队（不默认成交）"
 EXIT_RULE = "首个未涨停日（断板）当日收盘卖出；断板后不持有"
 
-# 成本三口径并列，用户裁定⑥「暂时不做决定」，此处只登记不裁定。
-COST_VARIANTS: dict[str, float] = {
-    "0.26%_书面": 0.0026,
-    "0.36%_papertrade": 0.0036,
-    "0.20%_AB落盘": 0.0020,
-}
+# 成本单一口径（用户 2026-11-23 裁定）：万 0.84 免五，见 costs.DEFAULT。
+# 实际成本率由 costs.DEFAULT.round_trip_rate() 计算，不在此硬编码百分比。
+COST_LABEL = "万0.84免五（佣金0.0084%/边·无最低5元·印花0.05%·过户0.001%·滑点15bp/边）"
 
 #: 单笔模拟买入金额上限（元）。对齐决策层「单笔 ≤10% / 单笔上限 10 万」口径。
-#: 只用于把「价格」换算成「数量 × 金额」——没有数量就永远无法计入
-#: 最低 5 元佣金（2026-11-17 修复：成本低估 P1）。
+#: 用于把「价格」换算成「数量 × 金额」，账本因此有真实成交额字段。
 POSITION_SIZE_YUAN = 100_000.0
 #: A 股最小交易单位（1 手 = 100 股），数量必须是它的整数倍。
 LOT_SIZE = 100
@@ -105,9 +101,8 @@ def position_size(price: float | None,
     规则：`qty = floor(size_yuan / (price * lot)) * lot`，至少 1 手；
     `notional = price * qty`（取到分）。
 
-    为什么需要它：`costs.CostModel.round_trip_rate(notional)` 的最低佣金项
-    `max(5, notional*0.00025)` 依赖**成交额**；账本此前只有价格、没有数量，
-    `notional` 恒为 None → 最低 5 元佣金被静默跳过（小单成本被低估 5–78bp）。
+    为什么需要它：账本要有真实「数量 × 成交额」才能逐腿核算滑点与印花税。
+    万0.84免五口径下成本率与成交额无关，但成交额仍是成本明细的必要字段。
     """
     try:
         p = float(price) if price is not None else None
@@ -192,7 +187,8 @@ CAVEATS: list[str] = [
     "涨停池留档在 2026-11-13 中午前只保留按连板高度降序的 top-30，二板可能被截断；"
     "此后帧带全量 `all` 字段。历史截断帧已标注，不可回溯补全。",
     "停牌无日线行时静默跨日；若右端到最新日线仍连续涨停，标记 censored（右删失），不计盈亏。",
-    "成本三口径（0.26% / 0.36% / 0.20% 每笔往返）并列给出，用户尚未裁定，不得只引用其中一个当结论。",
+    "成本单一口径：万 0.84 免五（佣金 0.0084%/边、无最低 5 元、印花 0.05%、过户 0.001%、滑点 15bp/边），"
+    "见 costs.DEFAULT；历史已结算记录保留当时口径，不重算。",
     "本账本为纯本地模拟：零账号、零费用，不向雪球/东财/券商发送任何下单或撤单指令。",
     "精简版终端只有 B1 一条策略；不再保留 E1/E3/E4 对照口径，也不存在「全策略合计」。",
     "选股口径（用户 2026-11-16 裁定）：情绪闸门通过后，题材内有一字二板（兔子）→ "
@@ -628,8 +624,8 @@ def settle(pos: dict[str, Any], daily: list[dict[str, Any]]) -> dict[str, Any]:
     2026-11-17 变更（lead 验收 P1）
     ------------------------------
     * 成本：从持仓/委托回填 `notional`（优先持仓字段，其次 `entry_price*qty`
-      兜底），使 `costs.DEFAULT.round_trip_rate(notional)` 能计入**最低 5 元佣金**；
-      历史持仓既无 notional 也无 qty 时仍如实标「不含最低 5 元佣金」，不编造金额。
+      兜底）；当前口径万0.84免五，成本率与成交额无关，notional 仅作明细留档。
+      历史已结算记录保留当时口径，不重算。
     * 卖点：退出日若收盘跌停封死 → `find_exit` 顺延到下一个可成交交易日；
       本函数把 `exit_price_basis` / `exit_blocked` / `exit_blocked_days` 写进
       持仓与 trades，日线未覆盖到可成交日时保持 holding（pending），不伪造价格。
@@ -694,10 +690,10 @@ def settle(pos: dict[str, Any], daily: list[dict[str, Any]]) -> dict[str, Any]:
         p["qty"] = qty
     cost_rate = costs.DEFAULT.round_trip_rate(notional)
     cost_note = (
-        "含佣金/印花税/过户费/双边滑点；notional 未知时不含最低 5 元佣金"
-        if notional is None else
-        f"按单笔成交额 {notional:,.2f} 元计入最低 5 元佣金"
-        "（costs.DEFAULT.round_trip_rate(notional)）")
+        f"万0.84免五：{COST_LABEL}；成本率 {cost_rate:.4%}/笔往返"
+        f"（notional={notional:,.2f} 元；免五口径下与成交额无关）"
+        if notional is not None else
+        f"万0.84免五：{COST_LABEL}；成本率 {cost_rate:.4%}/笔往返（成交额未知）")
     blocked_days = int(exit_row.get("exit_blocked_days") or 0)
     blocked_dates = list(exit_row.get("exit_blocked_dates") or [])
     if blocked_days:
@@ -727,7 +723,7 @@ def settle(pos: dict[str, Any], daily: list[dict[str, Any]]) -> dict[str, Any]:
                           and not dates.is_after(d.get("date"), exit_row["date"])
                           and bool(d.get("zt"))),
         "gross_return": round(gross, 6),
-        "net_by_cost": {k: round(gross - v, 6) for k, v in COST_VARIANTS.items()},
+        "net_return": round(gross - cost_rate, 6),  # 单一口径：万0.84免五
         "state_note": ("首个未涨停日以真实收盘价结算；断板后不再持有"
                        if not blocked_days else
                        "断板日跌停封死，顺延到首个可成交交易日收盘价结算"),
@@ -1209,8 +1205,8 @@ def sync(day: str | None = None, *, frames: list[dict[str, Any]] | None = None,
                 continue
             if o.get("status") != "filled" or oid in state["positions"]:
                 continue
-            # 2026-11-17（Fix A）：建仓即固化 qty + notional，成本模型才能计入
-            # 最低 5 元佣金；缺价格时按 None 如实留空（settle 再兜底/标注）。
+            # 建仓即固化 qty + notional，作为成本明细留档；
+            # 缺价格时按 None 如实留空（settle 再兜底/标注）。
             entry_px = o.get("entry_price")
             qty = o.get("qty")
             notional = o.get("notional")
@@ -1304,8 +1300,10 @@ def _payload(state: dict[str, Any], day: str, frames: list[dict[str, Any]],
                 "gross_mean": round(float(a.mean()), 6),
                 "gross_median": round(float(np.median(a)), 6)}
 
-    by_cost = {k: _agg([{**t, "gross_return": (t.get("net_by_cost") or {}).get(k)}
-                        for t in closed]) for k in COST_VARIANTS}
+    # 单一口径（万0.84免五）：新记录用 net_return；历史记录用 r_net 兜底。
+    by_cost = {COST_LABEL: _agg([{**t, "gross_return": (
+        t.get("net_return") if t.get("net_return") is not None else t.get("r_net"))}
+        for t in closed])}
     # 2026-11-16：读取时按需补「排板核验」（只读展示，不改委托状态）。
     try:
         from backend import fill_verify as _fv
@@ -1337,8 +1335,9 @@ def _payload(state: dict[str, Any], day: str, frames: list[dict[str, Any]],
         "strategy": STRATEGY,
         "entry_rule": ENTRY_RULE,
         "exit_rule": EXIT_RULE,
-        "cost_variants": COST_VARIANTS,
-        "cost_status": "用户裁定⑥：成本暂不做决定，三口径并列，不擅自统一",
+        "cost_label": COST_LABEL,
+        "cost_rate": round(costs.DEFAULT.round_trip_rate(), 6),
+        "cost_status": "用户 2026-11-23 裁定：万0.84免五，单一口径；历史记录不重算",
         "core_definition": guitu_roles.CORE_DEFINITION,
         "guitu_note": guitu_roles.PROXY_NOTE,
         "by_role": guitu_roles.summarize_roles(orders, trades),
