@@ -14,21 +14,44 @@ from backend import exit_alternatives as EA  # noqa: E402
 
 
 @pytest.fixture(scope="module")
-def report():
-    return EA.analyze()
+def production_report():
+    """用**生产账本**跑一份对照报告（隔离的临时账本为空，会返回 available=False）。
+
+    2026-11-23：本模块已改为运行时读 `live_sim.STATE_FILE`，因此默认受
+    conftest 的账本隔离约束（这正是修复的隔离洞）。需要真实样本的断言
+    必须显式指向生产账本路径。
+    """
+    import backend.live_sim as LS
+    prod = Path(__file__).resolve().parents[1] / "data" / "paper" / "sim_state.json"
+    if not prod.is_file():
+        pytest.skip("无生产账本，跳过真实样本断言")
+    saved = LS.STATE_FILE
+    try:
+        LS.STATE_FILE = prod
+        return EA.analyze()
+    finally:
+        LS.STATE_FILE = saved
 
 
-def test_shape_and_availability(report):
-    assert report["available"] is True
-    assert isinstance(report["n"], int) and report["n"] >= 0
+def test_shape_and_availability(production_report):
+    assert production_report["available"] is True
+    assert isinstance(production_report["n"], int) and production_report["n"] >= 0
     for k in ("current", "stoploss"):
-        s = report["summary"][k]
+        s = production_report["summary"][k]
         for f in ("n", "win_rate", "mean", "median"):
             assert f in s
-    assert "caveats" in report and report["caveats"]
+    assert "caveats" in production_report and production_report["caveats"]
 
 
-def test_no_nan_or_inf(report):
+def test_isolated_ledger_degrades_gracefully():
+    """隔离账本（测试默认环境）下必须优雅降级，不读生产账本。"""
+    r = EA.analyze()
+    assert r["available"] is False          # 临时账本为空
+    assert r["trades"] == []
+    assert r["caveats"]                    # 边界声明仍要有
+
+
+def test_no_nan_or_inf(production_report):
     """JSON 边界必须是干净数字（None 允许，NaN/Inf 不允许）。"""
     def walk(v):
         if isinstance(v, float):
@@ -40,11 +63,11 @@ def test_no_nan_or_inf(report):
         elif isinstance(v, list):
             for x in v:
                 walk(x)
-    walk(report)
+    walk(production_report)
 
 
-def test_each_trade_has_comparison_fields(report):
-    for t in report["trades"]:
+def test_each_trade_has_comparison_fields(production_report):
+    for t in production_report["trades"]:
         for k in ("id", "code", "name", "entry_date", "entry_price",
                   "current_return", "stoploss_return", "delta_pp",
                   "stoploss_exit_date", "stoploss_note", "context"):
@@ -54,9 +77,9 @@ def test_each_trade_has_comparison_fields(report):
             assert k in ctx
 
 
-def test_delta_consistency(report):
+def test_delta_consistency(production_report):
     """delta_pp 必须等于 (stoploss - current) * 100。"""
-    for t in report["trades"]:
+    for t in production_report["trades"]:
         if t["delta_pp"] is None:
             assert t["stoploss_return"] is None
             continue
@@ -64,8 +87,8 @@ def test_delta_consistency(report):
         assert t["delta_pp"] == pytest.approx(expect, abs=1e-9)
 
 
-def test_summary_delta_matches_means(report):
-    s = report["summary"]
+def test_summary_delta_matches_means(production_report):
+    s = production_report["summary"]
     if s["delta_mean_pp"] is None:
         assert s["current"]["mean"] is None or s["stoploss"]["mean"] is None
         return
@@ -94,8 +117,8 @@ def test_core_logic_is_readonly_pure_functions():
 _DIM_KEYS = {"break_limit_down", "gate", "high_avg_ret", "high_limit_down_share"}
 
 
-def test_by_env_present_and_well_formed(report):
-    groups = report["by_env"]
+def test_by_env_present_and_well_formed(production_report):
+    groups = production_report["by_env"]
     assert isinstance(groups, list) and groups
     for g in groups:
         for k in ("dimension", "bucket", "n", "current", "stoploss",
@@ -107,19 +130,19 @@ def test_by_env_present_and_well_formed(report):
         assert g["small_sample"] is (g["n"] < 5)
 
 
-def test_by_env_buckets_cover_all_trades_without_overlap(report):
+def test_by_env_buckets_cover_all_trades_without_overlap(production_report):
     """每个维度的 n 之和必须等于该维度可判定笔数（<= 总笔数）。"""
     for dim in _DIM_KEYS:
-        total = sum(g["n"] for g in report["by_env"] if g["dimension"] == dim)
-        assert total <= report["n"], f"{dim} 分组重复计数：{total} > {report['n']}"
+        total = sum(g["n"] for g in production_report["by_env"] if g["dimension"] == dim)
+        assert total <= production_report["n"], f"{dim} 分组重复计数：{total} > {production_report['n']}"
     # break_limit_down 是必判字段（每笔都有断板日），应覆盖全部
-    brk = [g for g in report["by_env"] if g["dimension"] == "break_limit_down"]
+    brk = [g for g in production_report["by_env"] if g["dimension"] == "break_limit_down"]
     if brk:
-        assert sum(g["n"] for g in brk) == report["n"]
+        assert sum(g["n"] for g in brk) == production_report["n"]
 
 
-def test_by_env_delta_consistent(report):
-    for g in report["by_env"]:
+def test_by_env_delta_consistent(production_report):
+    for g in production_report["by_env"]:
         if g["delta_mean_pp"] is None:
             assert g["current"]["mean"] is None or g["stoploss"]["mean"] is None
             continue

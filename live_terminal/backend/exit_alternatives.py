@@ -31,7 +31,18 @@ from backend import feature_engine, feeds, json_safe, live_sim, paths, trading_r
 
 TERMINAL = Path(__file__).resolve().parents[1]
 LIVE_DIR = paths.data_dir() / "live"
-STATE_FILE = TERMINAL / "data" / "paper" / "sim_state.json"
+
+
+def _state_file() -> Path:
+    """账本路径：**运行时读** `live_sim.STATE_FILE`。
+
+    2026-11-23 审计 P1-10：旧实现 import 时硬编码，绕过了
+    `tests/conftest.py` 的账本隔离（测试会读到生产账本）。
+    """
+    sf = getattr(live_sim, "STATE_FILE", None)
+    if isinstance(sf, Path):
+        return sf
+    return TERMINAL / "data" / "paper" / "sim_state.json"
 
 # v3 常量：固定止盈止损与持有窗口（与 exit_timing_study_v3.py L116-128 一致）
 STOP_LOSS_RATE = 0.93
@@ -114,8 +125,22 @@ def try_close(r: dict[str, Any], why: str = "") -> dict[str, Any] | None:
             "note": f"收盘@{r['close']:.2f} {why}".strip()}
 
 
-def _ret(px: float | None, e: float) -> float | None:
-    return (px / e - 1.0) if px is not None else None
+def _ret(px: float | None, e: float | None) -> float | None:
+    """(卖出价/买入价 - 1)；任一侧非法返回 None（不抛 ZeroDivisionError）。
+
+    2026-11-23 审计 P0-6：旧实现缺 e>0 守卫，账本里出现 entry_price=0
+    会让整个 analyze() 抛 ZeroDivisionError → /api/exit-alternatives 直接 500。
+    """
+    if px is None or e is None:
+        return None
+    try:
+        p = float(px)
+        b = float(e)
+    except (TypeError, ValueError):
+        return None
+    if not (b > 0) or not (p == p):
+        return None
+    return p / b - 1.0
 
 
 def _simulate_e(d: list[dict[str, Any]], ei: int, entry_price: float
@@ -226,9 +251,13 @@ def _stats(vals: list[float]) -> dict[str, Any]:
 
 def _load_closed_trades() -> list[dict[str, Any]]:
     """只读账本，取已结算（gross_return 为数值）的交易，按 id 稳定排序。"""
-    if not STATE_FILE.is_file():
+    sf = _state_file()
+    if not sf.is_file():
         return []
-    data = json.loads(STATE_FILE.read_text(encoding="utf-8"))
+    try:
+        data = json.loads(sf.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
     trades = data.get("trades") or []
     out = []
     for t in trades:
@@ -238,13 +267,13 @@ def _load_closed_trades() -> list[dict[str, Any]]:
     return sorted(out, key=lambda t: str(t.get("id") or ""))
 
 
-# 环境分组维度：(key, 取值函数, 标签映射)。取值函数返回分组名；None = 不参与分组。
-_ENV_DIMS: list[tuple[str, Any, dict[str, str]]] = [
-    ("break_limit_down", "break_is_limit_down", {}),
-    ("gate", "gate_blocked", {}),
-    ("high_avg_ret", "high_avg_ret", {}),
-    ("high_limit_down_share", "high_limit_down_share", {}),
-]
+# 环境分组维度 key（分组逻辑见 `_bucket`，标签在 `_bucket` 内按维度返回）。
+_ENV_DIMS: tuple[str, ...] = (
+    "break_limit_down",
+    "gate",
+    "high_avg_ret",
+    "high_limit_down_share",
+)
 
 
 def _bucket(trade: dict[str, Any], dim: str) -> str | None:
@@ -289,7 +318,7 @@ def _group_summary(trades: list[dict[str, Any]]) -> list[dict[str, Any]]:
     只做描述性分组，不做显著性检验；n 很小的组会如实标出。
     """
     out: list[dict[str, Any]] = []
-    for key, _field, _labels in _ENV_DIMS:
+    for key in _ENV_DIMS:
         buckets: dict[str, list[dict[str, Any]]] = {}
         for t in trades:
             b = _bucket(t, key)

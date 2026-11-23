@@ -177,6 +177,76 @@ def test_drift_no_anchor_returns_none(store):
 
 
 # ---------------------------------------------------------------------------
+# 并发与一致性（2026-11-23 审计 P0-4 / P0-5 回归）
+# ---------------------------------------------------------------------------
+
+def test_concurrent_writes_do_not_lose_data(store):
+    """并发 load→record→save 必须不丢数据、不抛 PermissionError。
+
+    修复前实测：8 线程 × 15 轮 = 120 次写入只落盘 1 条 + 118 次 PermissionError。
+    """
+    import threading
+    errors: list[str] = []
+
+    def worker(i: int) -> None:
+        for _ in range(10):
+            try:
+                with IS.locked_update() as st:
+                    IS.record_day(st, day=f"2026-02-{i:02d}", metrics=_rec(),
+                                  dims=_dims(), level="L5", is_ice=True,
+                                  size_factor=0.3, itype="both")
+            except Exception as exc:  # noqa: BLE001
+                errors.append(f"{type(exc).__name__}: {exc}")
+
+    ts = [threading.Thread(target=worker, args=(i,)) for i in range(1, 7)]
+    for t in ts:
+        t.start()
+    for t in ts:
+        t.join()
+
+    assert not errors, f"并发写入报错：{errors[:3]}"
+    final = IS.load()
+    assert len(final["auto_samples"]) == 6, "6 天数据必须全部落盘"
+
+
+def test_non_ice_revokes_previous_auto_sample(store):
+    """P0-5：先判冰、后判非冰，必须撤销 auto 记录并留档 superseded。
+
+    修复前：history 说非冰、auto_samples 说冰 → 样本库自相矛盾，
+    且 drift() 仍算该日为算法命中，虚高人工锚点重合率。
+    """
+    d = IS.load()
+    IS.record_day(d, day="2026-11-16", metrics=_rec(), dims=_dims(),
+                  level="L5", is_ice=True, size_factor=0.3, itype="both")
+    assert "2026-11-16" in d["auto_samples"]
+
+    IS.record_day(d, day="2026-11-16", metrics=_rec(), dims=_dims(),
+                  level="L0", is_ice=False, size_factor=1.0, itype=None)
+    assert "2026-11-16" not in d["auto_samples"], "非冰点必须撤销 auto 记录"
+    assert d["history"]["2026-11-16"]["is_ice"] is False
+    assert d["history"]["2026-11-16"]["severity_level"] == "L0"
+    sup = d.get("superseded_samples") or {}
+    assert "2026-11-16" in sup and sup["2026-11-16"]["superseded"] is True
+
+
+def test_corrupt_store_is_backed_up_not_silently_overwritten(store):
+    """P0-9：坏文件必须先备份，避免下一次 save 覆盖真实样本库。"""
+    store.write_text('{"seeds": [broken json', encoding="utf-8")
+    d = IS.load()
+    assert d["seeds"] == []                      # 降级为空结构
+    backups = list(store.parent.glob("ice_samples.corrupt.*.json"))
+    assert backups, "坏文件必须被备份，否则下一次 save 会覆盖真实库"
+
+
+def test_locked_update_returns_saved_state(store):
+    with IS.locked_update() as st:
+        st["seeds"] = [{"date": "2026-09-02", "status": "anchor"}]
+    again = IS.load()
+    assert again["seeds"][0]["date"] == "2026-09-02"
+    assert again["updated_at"] is not None
+
+
+# ---------------------------------------------------------------------------
 # 生产样本库完整性（只读断言，确保迁移没丢人工种子）
 # ---------------------------------------------------------------------------
 

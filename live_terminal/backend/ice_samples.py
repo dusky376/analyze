@@ -41,6 +41,8 @@ from __future__ import annotations
 
 import json
 import os
+import threading
+import uuid
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -50,6 +52,10 @@ STORE = Path(os.environ.get("WUKONG_ICE_SAMPLES", ROOT / "data" / "ice_samples.j
 
 #: 样本库结构版本
 STORE_VERSION = 2
+
+#: 写锁：`app.py` 是 threaded=True，多个请求会同时 load-modify-save。
+#: 2026-11-23 审计实测：无锁时 120 次并发写只落盘 1 条、118 次 PermissionError。
+_LOCK = threading.RLock()
 
 
 def _now() -> str:
@@ -74,14 +80,23 @@ def _empty() -> dict[str, Any]:
 
 
 def load() -> dict[str, Any]:
-    """读样本库；文件缺失/损坏时返回空结构（不抛异常，不阻塞主流程）。"""
+    """读样本库；文件缺失/损坏时返回空结构（不抛异常，不阻塞主流程）。
+
+    2026-11-23 审计：损坏文件若只静默返回空结构，下一次 save() 会用空结构
+    覆盖真实样本库（anchors 永久丢失）。因此读到坏文件时先备份为
+    ``ice_samples.corrupt.<ts>.json`` 再降级。
+    """
     if not STORE.is_file():
         return _empty()
     try:
-        d = json.loads(STORE.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
+        with _LOCK:                       # 与 save() 的 replace 互斥
+            raw = STORE.read_text(encoding="utf-8")
+        d = json.loads(raw)
+    except (OSError, json.JSONDecodeError, UnicodeDecodeError):
+        _backup_corrupt()
         return _empty()
     if not isinstance(d, dict):
+        _backup_corrupt()
         return _empty()
     base = _empty()
     for k, v in base.items():
@@ -95,14 +110,75 @@ def load() -> dict[str, Any]:
     return d
 
 
-def save(data: dict[str, Any]) -> None:
-    """原子写回。"""
-    data["version"] = STORE_VERSION
-    data["updated_at"] = _now()
-    STORE.parent.mkdir(parents=True, exist_ok=True)
-    tmp = STORE.with_name(STORE.stem + ".tmp.json")
+def _backup_corrupt() -> None:
+    """把损坏的样本库另存一份，避免下一次 save() 覆盖掉人工锚点。"""
+    try:
+        ts = datetime.now().strftime("%Y%m%dT%H%M%S")
+        STORE.replace(STORE.with_name(f"{STORE.stem}.corrupt.{ts}.json"))
+    except OSError:
+        pass
+
+
+def save(data: dict[str, Any], *, only_if_changed: bool = True) -> bool:
+    """原子写回。返回是否真的写了盘。
+
+    Args:
+        only_if_changed: True 时，若内容与磁盘上的（去掉 updated_at 后）完全一致
+                         就跳过写入。避免每次 sync 都刷新时间戳、造成无意义的
+                         git diff 与磁盘写（用户要求"精简"）。
+
+    并发安全：整体持 `_LOCK`；临时文件名带 pid+uuid，
+    避免多线程写同一个 tmp（2026-11-23 审计实测的 PermissionError 根因）。
+    """
+    with _LOCK:
+        data["version"] = STORE_VERSION
+        if only_if_changed and STORE.is_file():
+            try:
+                old = json.loads(STORE.read_text(encoding="utf-8"))
+                a = {k: v for k, v in old.items() if k != "updated_at"}
+                b = {k: v for k, v in data.items() if k != "updated_at"}
+                if a == b:
+                    return False
+            except (OSError, json.JSONDecodeError):
+                pass
+        data["updated_at"] = _now()
+        STORE.parent.mkdir(parents=True, exist_ok=True)
+        tmp = STORE.with_name(f"{STORE.stem}.{os.getpid()}.{uuid.uuid4().hex[:8]}.tmp.json")
     tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     tmp.replace(STORE)
+    return True
+
+
+class locked_update:
+    """把「load → 修改 → save」作为一个原子临界区。
+
+    2026-11-23 审计 P0-4：`assess(persist=True)` 是无锁的
+    load-modify-save，并发时互相覆盖。Windows 上 `Path.replace`
+    与另一线程的读取还会撞 `PermissionError (WinError 5/32)`。
+    用法::
+
+        with ice_samples.locked_update() as st:
+            ice_samples.record_day(st, ...)
+
+    （退出时自动 save；`st` 是可变 dict，原地修改即可。）
+    """
+
+    def __enter__(self) -> dict[str, Any]:
+        _LOCK.acquire()
+        try:
+            self._data = load()
+            return self._data
+        except Exception:
+            _LOCK.release()
+            raise
+
+    def __exit__(self, exc_type, exc, tb) -> bool:
+        try:
+            if exc_type is None:
+                save(self._data, only_if_changed=False)
+        finally:
+            _LOCK.release()
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -157,6 +233,17 @@ def record_day(data: dict[str, Any], *, day: str, metrics: dict[str, Any],
 
     # auto_samples：只有命中才记（用户裁定 B）
     if not is_ice:
+        # 2026-11-23 修复（审计 P0-5）：判定改为「非冰」时必须撤销旧的 auto 记录，
+        # 否则 history 说非冰点、auto_samples 说冰点，样本库自相矛盾，
+        # 且 drift() 仍把该日算作算法命中，虚高人工锚点重合率。
+        # 不直接删除：标 superseded 保留痕迹（可回溯原则）。
+        prev = data["auto_samples"].get(key)
+        if prev is not None:
+            prev["superseded"] = True
+            prev["superseded_at"] = _now()
+            data["auto_samples"].pop(key, None)
+            data.setdefault("superseded_samples", {})[key] = prev
+            return False
         return False
     prev = data["auto_samples"].get(key)
     if prev is not None:
@@ -164,6 +251,9 @@ def record_day(data: dict[str, Any], *, day: str, metrics: dict[str, Any],
         data["auto_samples"][key] = {**prev, **entry, "source": "auto"}
         return False
     data["auto_samples"][key] = {**entry, "source": "auto"}
+    # 若曾被判非冰/被撤销，重新命中时从 superseded 移出
+    if key in (data.get("superseded_samples") or {}):
+        data["superseded_samples"].pop(key, None)
     return True
 
 
@@ -171,8 +261,13 @@ def calibrate_rows(data: dict[str, Any], *, include_auto: bool = True
                    ) -> tuple[list[dict[str, Any]], dict[str, int]]:
     """取用于分位校准的行（用户裁定 B：auto 参与校准）。
 
+    Args:
+        include_auto: True（默认，做法 B）= auto 样本参与分位校准；
+                      False = 只用人工 anchor 与无来源标记的历史记录，
+                      用于「回到纯人工口径」的对照实验。
+
     Returns:
-        (rows, counted) —— rows 为四维指标行；counted 记录用了多少 anchor/auto。
+        (rows, counted) —— rows 为四维指标行；counted 记录用了多少 anchor/auto/history。
     """
     rows: list[dict[str, Any]] = []
     counted = {"anchor": 0, "auto": 0, "history": 0}
@@ -182,15 +277,19 @@ def calibrate_rows(data: dict[str, Any], *, include_auto: bool = True
     for key, h in (data.get("history") or {}).items():
         if not isinstance(h, dict):
             continue
+        is_anchor = key in anchors
+        is_auto = (not is_anchor) and h.get("source") == "auto"
+        if is_auto and not include_auto:
+            continue                      # 纯人工口径：跳过 auto
         m = h.get("metrics") or {}
         rows.append({**m, "day": h.get("date") or key})
-        if key in anchors:
+        if is_anchor:
             counted["anchor"] += 1
-        elif h.get("source") == "auto":
+        elif is_auto:
             counted["auto"] += 1
         else:
             counted["history"] += 1
-    _ = include_auto  # 参数保留：未来若要回到"纯人工口径"可关掉 auto
+    return rows, counted
     return rows, counted
 
 

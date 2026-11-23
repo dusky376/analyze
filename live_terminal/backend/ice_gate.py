@@ -40,6 +40,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from typing import Any
+import threading
 
 import polars as pl
 
@@ -77,27 +78,43 @@ def _finite(v: Any) -> float | None:
 
 
 def level_by_pct(x: Any, bounds: dict[str, float] | None) -> str | None:
-    """按分位边界把标量映射到 L0..L5（与 v3.1 `_level_by_pct` 一致）。"""
+    """按分位边界把标量映射到 L0..L5（与 v3.1 `_level_by_pct` 一致）。
+
+    2026-11-23 加固：缺任一 P50..P95 键时返回 None，**不再用 `, 9` 兜底**。
+    旧写法的 9 是 `limit_down_n` 的量纲，套到 `down_share`(0~1) 或 `dt_ratio`
+    上会把该维度静默压到 L0/L1 —— 等于悄悄关掉这一维，却不报错。
+    """
     fv = _finite(x)
     if fv is None or not bounds:
         return None
-    if fv > bounds.get("P95", 9):
+    need = ("P50", "P70", "P80", "P90", "P95")
+    if any(bounds.get(k) is None for k in need):
+        return None                      # 边界不完整 → 明确不可判定
+    if fv > bounds["P95"]:
         return "L5"
-    if fv > bounds.get("P90", 9):
+    if fv > bounds["P90"]:
         return "L4"
-    if fv > bounds.get("P80", 9):
+    if fv > bounds["P80"]:
         return "L3"
-    if fv > bounds.get("P70", 9):
+    if fv > bounds["P70"]:
         return "L2"
-    if fv > bounds.get("P50", 9):
+    if fv > bounds["P50"]:
         return "L1"
     return "L0"
 
 
 def dim_levels(rec: dict[str, Any],
                bounds: dict[str, Any] | None = None) -> dict[str, str | None]:
-    """逐维度档位（v3.1 `dim_levels`）。"""
-    b = bounds if bounds is not None else DEFAULT_BOUNDS
+    """逐维度档位（v3.1 `dim_levels`）。
+
+    2026-11-23 加固：若传入 `bounds` 为空/缺键，**退回 DEFAULT_BOUNDS 快照**，
+    而不是让所有维度变 None —— 后者会让 `is_ice()` 静默返回 False，
+    冰点闸门彻底失效却没有任何报错（比报错更危险）。
+    """
+    b = bounds if bounds else DEFAULT_BOUNDS
+    # 缺任一维边界 → 整体退回快照，保证四维都能判定
+    if not all(isinstance(b.get(k), dict) and b.get(k) for k in DIM_KEYS):
+        b = DEFAULT_BOUNDS
     out: dict[str, str | None] = {}
     if not isinstance(rec, dict):
         return {k: None for k in DIM_KEYS}
@@ -220,18 +237,39 @@ def _metrics_frame(panel: pl.DataFrame) -> pl.DataFrame:
     return agg.with_columns(pl.col("trade_date").cast(pl.Utf8).alias("day")).drop("trade_date")
 
 
-_METRICS_CACHE: tuple[int, pl.DataFrame] | None = None
+_METRICS_CACHE: tuple[tuple[Any, ...], pl.DataFrame, pl.DataFrame] | None = None
+#: 第三个元素持有 panel 引用 —— 防止 panel 被 GC 后新对象复用同一 id，
+#: 导致缓存误命中（2026-11-23 审计实测的确定性 bug）。
+_METRICS_LOCK = threading.Lock()
+
+
+def _panel_fingerprint(p: pl.DataFrame) -> tuple[Any, ...]:
+    """panel 内容指纹（比起 id() 可靠）。
+
+    用 (高度, 列名, 首末日, 末行收盘和) 组合：这四项任一变化都会改变指纹，
+    而它们都由真实落盘数据决定，构造开销远小于重算全表。
+    """
+    try:
+        first = str(p["trade_date"].min())
+        last = str(p["trade_date"].max())
+        tail_sum = float(p["close"].tail(1000).sum() or 0.0)
+    except Exception:                    # noqa: BLE001 - 指纹失败则退化为弱键
+        first = last = ""
+        tail_sum = 0.0
+    return (p.height, tuple(p.columns), first, last, round(tail_sum, 4))
 
 
 def metrics_all(panel: pl.DataFrame | None = None) -> pl.DataFrame:
-    """全历史逐日四维指标（按 panel 对象 id + 高度缓存，避免重复计算）。"""
+    """全历史逐日四维指标（按 panel 内容指纹缓存，避免重复计算）。"""
     global _METRICS_CACHE
     p = panel if panel is not None else feeds.build_panel()
-    key = (id(p), p.height)
-    if _METRICS_CACHE is not None and _METRICS_CACHE[0] == key:
-        return _METRICS_CACHE[1]
+    key = _panel_fingerprint(p)
+    with _METRICS_LOCK:
+        if _METRICS_CACHE is not None and _METRICS_CACHE[0] == key:
+            return _METRICS_CACHE[1]
     m = _metrics_frame(p)
-    _METRICS_CACHE = (key, m)
+    with _METRICS_LOCK:
+        _METRICS_CACHE = (key, m, p)
     return m
 
 
@@ -295,9 +333,17 @@ def assess(day: str, *, panel: pl.DataFrame | None = None,
         }
 
     if bounds is None:
-        bounds = compute_bounds(history(p, days=250)) if roll_bounds else DEFAULT_BOUNDS
-        if not bounds:                       # 历史不足 → 退回快照，不静默失效
+        # 逐维度兜底：compute_bounds 对样本不足的维度会跳过（返回缺键），
+        # 若只在整个 dict 为空时才兜底，缺失维度会被静默排除出冰点判定
+        # （2026-11-23 审计实测：down_share=0.95 完全没计入）。
+        computed = compute_bounds(history(p, days=250)) if roll_bounds else {}
+        if not computed:
             bounds = DEFAULT_BOUNDS
+        else:
+            bounds = {**DEFAULT_BOUNDS, **computed}
+            for k in DIM_KEYS:               # 逐维度确保有边界
+                if not isinstance(bounds.get(k), dict) or not bounds.get(k):
+                    bounds[k] = DEFAULT_BOUNDS[k]
 
     dims = dim_levels(rec, bounds)
     s = severity(dims)
@@ -323,16 +369,18 @@ def assess(day: str, *, panel: pl.DataFrame | None = None,
     if persist:
         try:
             from backend import ice_samples
-            st = ice_samples.load()
-            is_new = ice_samples.record_day(
-                st, day=d, metrics=rec, dims=dims, level=s, is_ice=ice,
-                size_factor=factor, itype=itype, source="auto")
-            ice_samples.save(st)
+            # 原子临界区：load→record→save 全程持锁，避免并发覆盖/Windows replace 冲突
+            with ice_samples.locked_update() as st:
+                is_new = ice_samples.record_day(
+                    st, day=d, metrics=rec, dims=dims, level=s, is_ice=ice,
+                    size_factor=factor, itype=itype, source="auto")
+                auto_n = len(st.get("auto_samples") or {})
+                hist_n = len(st.get("history") or {})
             sample_info = {
                 "persisted": True,
                 "new_sample": is_new,
-                "auto_samples_n": len(st.get("auto_samples") or {}),
-                "history_n": len(st.get("history") or {}),
+                "auto_samples_n": auto_n,
+                "history_n": hist_n,
             }
         except Exception as exc:  # noqa: BLE001 - 写库失败不阻塞判定
             sample_info = {"persisted": False,

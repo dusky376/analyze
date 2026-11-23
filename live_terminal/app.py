@@ -91,8 +91,37 @@ def cached_copy(key: str, ttl: float, fn: Callable[[], Any]) -> Any:
 
 
 def clear_cache() -> None:
+    """清空所有层级的缓存。
+
+    2026-11-23 审计：旧实现只清 `_cache`，`ice_gate._METRICS_CACHE`、
+    `live_sim._GATE_CACHE`、`feeds` 的 panel 缓存、`fill_verify._AMT_CACHE`
+    都残留 → `/api/refresh` 并不能真正"刷新"，会继续用旧的全市场扫描结果。
+    """
     with _lock:
         _cache.clear()
+    # 各模块的进程级缓存（尽力清，缺属性则跳过，不阻塞刷新）
+    try:
+        from backend import ice_gate
+        ice_gate._METRICS_CACHE = None
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        live_sim._GATE_CACHE.clear()
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        from backend import feeds
+        for name in ("_PANEL_MEM", "_CAL_DAYS", "_PANEL_CACHE"):
+            if hasattr(feeds, name):
+                setattr(feeds, name, None)
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        from backend import fill_verify
+        if hasattr(fill_verify, "_AMT_CACHE"):
+            fill_verify._AMT_CACHE.clear()
+    except Exception:  # noqa: BLE001
+        pass
 
 
 def json_ok(payload: Any, ttl: int = 0) -> Response:

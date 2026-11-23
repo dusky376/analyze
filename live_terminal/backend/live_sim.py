@@ -57,6 +57,7 @@
 """
 from __future__ import annotations
 
+import copy
 import json
 import threading
 from datetime import datetime
@@ -1065,8 +1066,17 @@ def collect_guitu_targets(
     return picked, notes
 
 
+#: emotion_gate 按日缓存（它是全市场 O(N) 扫描，实测 ~4s）。
+#: 同一交易日内反复调用结果不变（只依赖已落盘日线），因此按 day 缓存；
+#: sync / _payload / API 多处调用只算一次。
+_GATE_CACHE: dict[str, dict[str, Any]] = {}
+_GATE_CACHE_MAX = 8
+
+
 def emotion_gate(day: str) -> dict[str, Any]:
     """悟空真经第一步：情绪闸门（人气股赚钱效应）。
+
+    结果按 day 缓存（见 `_GATE_CACHE`）：全市场扫描约 4s，多处调用只算一次。
 
     用户原话：「明显的亏钱效应，最直接的指标，人气股是不是在大跌，是不是按在跌停」。
 
@@ -1079,6 +1089,14 @@ def emotion_gate(day: str) -> dict[str, Any]:
     （旧口径判冰点 L5），但昨日高标 6 只里 4 只涨停、平均 +2.18% —— 那只是
     资金换方向，不是打板亏钱效应。旧口径会让策略在这种日子空仓。
     """
+    # 键归一：'20261120' 与 '2026-11-20' 是同一交易日，必须共用缓存
+    # （2026-11-23 审计实测：两种写法各扫一遍全市场，每次 ~4s）
+    from backend import dates as _dates
+    _nd = _dates.norm_day(day)
+    key = str(_nd) if _nd else str(day)
+    hit = _GATE_CACHE.get(key)
+    if hit is not None:
+        return copy.deepcopy(hit)
     out: dict[str, Any] = {"available": False, "reason": None, "blocked": False}
     try:
         from backend import feeds, feature_engine
@@ -1160,6 +1178,11 @@ def emotion_gate(day: str) -> dict[str, Any]:
         out["verdict"] = ("情绪不佳 → 停手/控仓" if reasons else "情绪可做")
     except Exception as e:  # noqa: BLE001
         out["reason"] = f"{type(e).__name__}: {e}"
+    # 只缓存成功结果；失败（面板缺失等）不缓存，下次仍可重试
+    if out.get("available"):
+        if len(_GATE_CACHE) >= _GATE_CACHE_MAX:
+            _GATE_CACHE.pop(next(iter(_GATE_CACHE)))
+        _GATE_CACHE[key] = copy.deepcopy(out)
     return out
 
 
@@ -1304,56 +1327,72 @@ def sync(day: str | None = None, *, frames: list[dict[str, Any]] | None = None,
         n_backfill = _backfill_size_fields(state)
         if n_backfill:
             notes.append(f"历史账本回填 qty/notional {n_backfill} 条（仅补字段，不改已结算 r_net）")
-        out = _payload(state, day, fr, notes)
+        out = _payload(state, day, fr, notes, ice=ice, gate=gate)
         _atomic_write(STATE_FILE, state)
         _atomic_write(SNAPSHOT, out)
         return out
 
 
-def _ice_payload(day: str) -> dict[str, Any]:
-    """市场级冰点快照（只读展示；不改买卖点）。失败降级为空，不阻塞 payload。"""
-    try:
-        from backend import ice_gate
-        r = ice_gate.assess(day)
-        return {
-            "available": bool(r.get("available")),
-            "level": r.get("level"),
-            "is_ice": bool(r.get("is_ice")),
-            "ice_type": r.get("ice_type"),
-            "size_factor": r.get("size_factor"),
-            "verdict": r.get("verdict"),
-            "reasons": r.get("reasons") or [],
-            "metrics": r.get("metrics"),
-            "dim_levels": r.get("dim_levels"),
-            "sample": r.get("sample"),
-            "caveat": r.get("caveat"),
-        }
-    except Exception as exc:  # noqa: BLE001
-        return {"available": False, "reason": f"{type(exc).__name__}: {exc}"}
+def _ice_payload_from(ice: dict[str, Any] | None, day: str) -> dict[str, Any]:
+    """冰点快照：优先复用 sync 已算好的结果，缺失才现算（省一次全市场扫描）。"""
+    if ice is not None:
+        r = ice
+    else:
+        try:
+            from backend import ice_gate
+            r = ice_gate.assess(day)
+        except Exception as exc:  # noqa: BLE001
+            return {"available": False, "reason": f"{type(exc).__name__}: {exc}"}
+    return {
+        "available": bool(r.get("available")),
+        "level": r.get("level"),
+        "is_ice": bool(r.get("is_ice")),
+        "ice_type": r.get("ice_type"),
+        "size_factor": r.get("size_factor"),
+        "verdict": r.get("verdict"),
+        "reasons": r.get("reasons") or [],
+        "metrics": r.get("metrics"),
+        "dim_levels": r.get("dim_levels"),
+        "sample": r.get("sample"),
+        "caveat": r.get("caveat"),
+        "reason": r.get("reason"),
+    }
 
 
-def _emotion_payload(day: str) -> dict[str, Any]:
-    """个股级情绪闸门快照（含条件 C 溢价）。失败降级为空。"""
-    try:
-        g = emotion_gate(day)
-        return {
-            "available": bool(g.get("available")),
-            "blocked": bool(g.get("blocked")),
-            "verdict": g.get("verdict"),
-            "n_high": g.get("n_high"),
-            "avg_ret": g.get("avg_ret"),
-            "limit_down_share": g.get("limit_down_share"),
-            "premium": g.get("premium"),
-            "n_premium": g.get("n_premium"),
-            "reasons": g.get("reasons") or [],
-            "reason": g.get("reason"),
-        }
-    except Exception as exc:  # noqa: BLE001
-        return {"available": False, "reason": f"{type(exc).__name__}: {exc}"}
+def _emotion_payload_from(gate: dict[str, Any] | None, day: str) -> dict[str, Any]:
+    """情绪快照：优先复用 sync 已算好的结果，缺失现算（emotion_gate 约 4s/次）。"""
+    if gate is not None:
+        g = gate
+    else:
+        try:
+            g = emotion_gate(day)
+        except Exception as exc:  # noqa: BLE001
+            return {"available": False, "reason": f"{type(exc).__name__}: {exc}"}
+    return {
+        "available": bool(g.get("available")),
+        "blocked": bool(g.get("blocked")),
+        "verdict": g.get("verdict"),
+        "n_high": g.get("n_high"),
+        "avg_ret": g.get("avg_ret"),
+        "limit_down_share": g.get("limit_down_share"),
+        "premium": g.get("premium"),
+        "n_premium": g.get("n_premium"),
+        "reasons": g.get("reasons") or [],
+        "reason": g.get("reason"),
+    }
 
 
 def _payload(state: dict[str, Any], day: str, frames: list[dict[str, Any]],
-             notes: list[str]) -> dict[str, Any]:
+             notes: list[str], *,
+             ice: dict[str, Any] | None = None,
+             gate: dict[str, Any] | None = None) -> dict[str, Any]:
+    """组装账本快照。
+
+    Args:
+        ice / gate: sync 已经算好的冰点与情绪结果。传入则**直接复用**，
+                    避免 `_payload` 再扫一遍全市场（实测单次 emotion_gate 约 4s，
+                    重复调用会让 /api/live-sim 首次请求多等一倍）。
+    """
     orders = list(state["orders"].values())
     today = [o for o in orders if o.get("day") == day]
     # 2026-11-20 用户裁定：**无委托就显示不开仓，不要展示上个有委托日的单**。
@@ -1426,8 +1465,8 @@ def _payload(state: dict[str, Any], day: str, frames: list[dict[str, Any]],
         "cost_label": COST_LABEL,
         "cost_rate": round(costs.DEFAULT.round_trip_rate(), 6),
         "cost_status": "用户 2026-11-23 裁定：万0.84免五，单一口径；历史记录不重算",
-        "ice": _ice_payload(day),
-        "emotion": _emotion_payload(day),
+        "ice": _ice_payload_from(ice, day),
+        "emotion": _emotion_payload_from(gate, day),
         "core_definition": guitu_roles.CORE_DEFINITION,
         "guitu_note": guitu_roles.PROXY_NOTE,
         "by_role": guitu_roles.summarize_roles(orders, trades),

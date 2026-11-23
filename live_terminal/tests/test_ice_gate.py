@@ -93,6 +93,29 @@ def test_compute_bounds_from_rows():
     assert IG.compute_bounds([{"limit_down_n": 1}]) == {}
 
 
+def test_dim_levels_falls_back_when_bounds_missing():
+    """加固：bounds 为空/残缺时必须退回 DEFAULT_BOUNDS，不能静默判 None。
+
+    2026-11-23：若让所有维度变 None，is_ice() 会静默返回 False，
+    冰点闸门彻底失效却无报错（比崩溃更危险）。
+    """
+    rec = {"down_share": 0.95, "limit_down_n": 100,
+           "dt_ratio": 3.0, "broken_hi_n": 8}
+    expect = {"down_share": "L5", "limit_down_n": "L5",
+              "dt_ratio": "L5", "broken_hi_n": "L4"}
+    assert IG.dim_levels(rec, {}) == expect
+    assert IG.dim_levels(rec, {"down_share": IG.DEFAULT_BOUNDS["down_share"]}) == expect
+    assert IG.dim_levels(rec, None) == expect
+    # 关键：空 bounds 下仍能判出冰点（不是静默 False）
+    assert IG.is_ice(rec, IG.dim_levels(rec, {})) is True
+
+
+def test_level_by_pct_returns_none_without_bounds():
+    """空 bounds 时 level_by_pct 返回 None（不瞎猜档位）。"""
+    assert IG.level_by_pct(0.95, {}) is None
+    assert IG.level_by_pct(100, {}) is None
+
+
 # ---------------------------------------------------------------------------
 # 真实数据（集成）
 # ---------------------------------------------------------------------------

@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updated_at": "2026-11-23T22:29:44",
+  "updated_at": "2026-11-23T22:51:12",
   "feature_note": null,
   "seeds": [
     {
@@ -1119,7 +1119,7 @@
       "is_ice": true,
       "ice_type": "both",
       "size_factor": 0.5,
-      "detected_at": "2026-11-23T22:29:44",
+      "detected_at": "2026-11-23T22:50:43",
       "source": "auto"
     },
     "2026-11-17": {
@@ -7097,7 +7097,7 @@
       "is_ice": true,
       "ice_type": "both",
       "size_factor": 0.5,
-      "detected_at": "2026-11-23T22:29:44",
+      "detected_at": "2026-11-23T22:50:43",
       "source": "auto"
     },
     "2026-11-17": {
@@ -7217,7 +7217,7 @@
       "is_ice": false,
       "ice_type": null,
       "size_factor": 1.0,
-      "detected_at": "2026-11-23T22:29:30",
+      "detected_at": "2026-11-23T22:51:12",
       "source": "auto"
     }
   },

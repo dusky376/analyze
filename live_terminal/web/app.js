@@ -468,11 +468,34 @@ async function loadAll(manual = false) {
     $("#footerMeta").textContent =
       `${live.strategy || "悟空真经"} · 账本生成 ${live.generated_at || "—"} · 页面刷新 ${new Date().toLocaleTimeString("zh-CN")}`;
   } catch (err) {
+    // 2026-11-23 审计 P1-11：live-sim 失败时其余区块会保留上一轮旧 DOM，
+    // 演示时会变成"顶部报错、下面还是旧数据"的误导状态。这里显式标灰。
     $("#heroTitle").textContent = "载入失败";
     $("#heroReason").textContent = String(err && err.message ? err.message : err);
     setText("#healthPill", "服务异常", "bad");
+    clearStalePanels();
   } finally {
     btn.disabled = false;
+  }
+}
+
+// 请求失败时把各区块置为"数据不可用"，避免旧数字冒充新数字。
+function clearStalePanels() {
+  const emptyRows = [
+    ["#todayBody", 9], ["#posBody", 8], ["#costBody", 5],
+    ["#exitAltBody", 6], ["#btStats", 6], ["#btLatest", 7],
+  ];
+  for (const [sel, cols] of emptyRows) {
+    const n = $(sel);
+    if (n) n.innerHTML = `<tr><td colspan="${cols}" class="empty">数据不可用（本次请求失败）</td></tr>`;
+  }
+  for (const sel of ["#iceBox", "#emotionBox", "#exitEnvGroups", "#pairsWrap"]) {
+    const n = $(sel);
+    if (n) n.innerHTML = `<div class="empty-card">数据不可用（本次请求失败）</div>`;
+  }
+  for (const id of ["#kToday", "#kFilled", "#kHolding", "#kPairs"]) {
+    const n = $(id);
+    if (n) n.textContent = "—";
   }
 }
 
