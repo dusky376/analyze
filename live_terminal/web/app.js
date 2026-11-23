@@ -307,6 +307,41 @@ function renderGuitu(g) {
     "<li>暂无边界声明。</li>";
 }
 
+/* ------------------------------------------------------- exit alternatives */
+function renderExitAlternatives(d) {
+  if (!d || !d.available) {
+    $("#exitAltMeta").textContent = (d && d.reason) || "卖法对照暂不可用。";
+    return;
+  }
+  const s = d.summary || {};
+  const cur = s.current || {}, sl = s.stoploss || {};
+  const delta = s.delta_mean_pp;
+  $("#exitAltMeta").textContent =
+    `n=${esc(d.n)} · 现行均值 ${fmtPct(cur.mean)} / 中位 ${fmtPct(cur.median)}` +
+    ` · 固定止损模拟均值 ${fmtPct(sl.mean)} / 中位 ${fmtPct(sl.median)}` +
+    (has(delta) ? ` · 均值差 ${Number(delta) >= 0 ? "+" : ""}${Number(delta).toFixed(2)}pp（假设，非结论）` : "");
+
+  $("#exitAltBody").innerHTML = (d.trades || []).map((t) => {
+    const ctx = t.context || {};
+    const gate = ctx.gate_blocked === true ? "闸门拦截" : ctx.gate_blocked === false ? "闸门通过" : "闸门未知";
+    const high = has(ctx.high_avg_ret) ? `高标均涨 ${fmtPct(ctx.high_avg_ret)}` : "高标 —";
+    const ld = has(ctx.high_limit_down_share) ? `跌停占比 ${(Number(ctx.high_limit_down_share) * 100).toFixed(0)}%` : "";
+    const brk = ctx.break_is_limit_down === true ? "断板跌停" : ctx.break_is_limit_down === false ? "断板未跌停" : "断板 —";
+    const envText = [gate, high, ld, brk].filter(Boolean).join(" · ");
+    return `<tr>
+      <td><div class="name">${esc(t.name || "—")}</div><div class="code">${esc(t.code || "")}</div></td>
+      <td class="num ${cls(t.current_return)}">${fmtPct(t.current_return)}</td>
+      <td class="num ${cls(t.stoploss_return)}">${fmtPct(t.stoploss_return)}</td>
+      <td class="num ${cls(t.delta_pp)}">${has(t.delta_pp) ? `${Number(t.delta_pp) >= 0 ? "+" : ""}${Number(t.delta_pp).toFixed(1)}pp` : "—"}</td>
+      <td class="muted">${esc(envText)}</td>
+      <td class="muted">${esc(t.stoploss_note || "—")}</td>
+    </tr>`;
+  }).join("") || `<tr><td colspan="6" class="empty">暂无已结算样本。</td></tr>`;
+
+  $("#exitAltCaveats").innerHTML = (d.caveats || []).map((x) => `<li>${esc(x)}</li>`).join("") ||
+    "<li>暂无边界声明。</li>";
+}
+
 /* ------------------------------------------------------------------- load */
 async function loadAll(manual = false) {
   const btn = $("#refreshBtn");
@@ -315,14 +350,16 @@ async function loadAll(manual = false) {
     if (manual) {
       await fetch("/api/refresh", { method: "POST" });
     }
-    const [health, live, guitu] = await Promise.all([
+    const [health, live, guitu, exitAlt] = await Promise.all([
       getJSON("/api/health", 30000).catch(() => null),
       getJSON("/api/live-sim", 90000),
       getJSON("/api/guitu", 60000).catch(() => null),
+      getJSON("/api/exit-alternatives", 90000).catch(() => null),
     ]);
     renderHealth(health);
     renderLiveSim(live);
     if (guitu) renderGuitu(guitu);
+    if (exitAlt) renderExitAlternatives(exitAlt);
     $("#footerMeta").textContent =
       `${live.strategy || "悟空真经"} · 账本生成 ${live.generated_at || "—"} · 页面刷新 ${new Date().toLocaleTimeString("zh-CN")}`;
   } catch (err) {

@@ -36,8 +36,8 @@ from typing import Any, Callable
 import polars as pl
 from flask import Flask, Response, jsonify, request, send_from_directory
 
-from backend import (data_health, feeds, guitu_backtest, guitu_cases, leader_ladder,
-                     live_sim, market_clock, queue_match, recorder)
+from backend import (data_health, exit_alternatives, feeds, guitu_backtest, guitu_cases,
+                     leader_ladder, live_sim, market_clock, queue_match, recorder)
 from backend.json_safe import sanitize
 
 ROOT = Path(__file__).resolve().parent
@@ -227,6 +227,16 @@ def api_guitu_cases() -> Response:
 @app.get("/api/recorder")
 def api_recorder() -> Response:
     return api_guard(recorder.status)
+
+
+@app.get("/api/exit-alternatives")
+def api_exit_alternatives() -> Response:
+    """卖法对照（只读研究）：现行卖法 vs 固定止盈止损模拟 + 当时环境快照。
+
+    不改任何账本、不产生买卖点；仅展示"若当时用另一卖法"的描述性对照。
+    """
+    return api_guard(lambda: cached_copy("exit_alternatives", 300.0,
+                                         exit_alternatives.analyze))
 
 
 @app.post("/api/refresh")

@@ -68,6 +68,7 @@ start.bat
 | `GET /api/guitu` | 历史回放 + 今日实时排板队列 |
 | `GET /api/guitu-cases` | 龟兔案例库 / 今日快照 / 命题检验（只读） |
 | `GET /api/recorder` | 采集器状态 |
+| `GET /api/exit-alternatives` | 卖法对照（只读研究）：现行卖法 vs 固定止盈止损模拟 + 当时情绪/高标/环境快照 |
 | `POST /api/refresh` | 清缓存并重新同步 |
 | `GET /api/stream` | SSE 每 30s 推送今日开仓简报（前端可降级为轮询） |
 
