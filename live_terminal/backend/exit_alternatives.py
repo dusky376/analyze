@@ -46,6 +46,8 @@ CAVEATS = [
     "现行卖法收益直接取账本 gross_return（未重算），与止盈止损模拟口径（未扣交易成本）略有差异。",
     "一字跌停（全天封死）无法成交时止损顺延；跳空低开按开盘价成交，跳空高开止盈按开盘价成交。",
     "情绪闸门/高标快照取买入日 emotion_gate；市场环境取断板日 breadth.jsonl 最后一行；缺数据则为 None。",
+    "按环境分组（by_env）只做描述性切分，未做显著性检验；n<5 的组标 small_sample=true，"
+    "不得据此认为「某环境下固定止损更有效」——分组越多、多重比较偶然越大。",
     "样本量小（已结算交易笔数有限），结论仅供参考，不构成策略建议。",
 ]
 
@@ -236,6 +238,82 @@ def _load_closed_trades() -> list[dict[str, Any]]:
     return sorted(out, key=lambda t: str(t.get("id") or ""))
 
 
+# 环境分组维度：(key, 取值函数, 标签映射)。取值函数返回分组名；None = 不参与分组。
+_ENV_DIMS: list[tuple[str, Any, dict[str, str]]] = [
+    ("break_limit_down", "break_is_limit_down", {}),
+    ("gate", "gate_blocked", {}),
+    ("high_avg_ret", "high_avg_ret", {}),
+    ("high_limit_down_share", "high_limit_down_share", {}),
+]
+
+
+def _bucket(trade: dict[str, Any], dim: str) -> str | None:
+    """把一笔交易映射到某个环境分组标签；无法判定返回 None（不进分组）。"""
+    ctx = trade.get("context") or {}
+    if dim == "break_limit_down":
+        v = ctx.get("break_is_limit_down")
+        if v is True:
+            return "断板跌停"
+        if v is False:
+            return "断板未跌停"
+        return None
+    if dim == "gate":
+        v = ctx.get("gate_blocked")
+        if v is True:
+            return "闸门拦截"
+        if v is False:
+            return "闸门通过"
+        return None
+    if dim == "high_avg_ret":
+        v = ctx.get("high_avg_ret")
+        if v is None:
+            return None
+        try:
+            return "昨日高标均涨>0" if float(v) > 0 else "昨日高标均涨≤0"
+        except (TypeError, ValueError):
+            return None
+    if dim == "high_limit_down_share":
+        v = ctx.get("high_limit_down_share")
+        if v is None:
+            return None
+        try:
+            return "高标跌停占比≥20%" if float(v) >= 0.20 else "高标跌停占比<20%"
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
+def _group_summary(trades: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """按环境维度分组，给出每组的现行/止损收益对比。
+
+    只做描述性分组，不做显著性检验；n 很小的组会如实标出。
+    """
+    out: list[dict[str, Any]] = []
+    for key, _field, _labels in _ENV_DIMS:
+        buckets: dict[str, list[dict[str, Any]]] = {}
+        for t in trades:
+            b = _bucket(t, key)
+            if b:
+                buckets.setdefault(b, []).append(t)
+        for label in sorted(buckets):
+            rows = buckets[label]
+            cur = _stats([r.get("current_return") for r in rows])
+            sl = _stats([r.get("stoploss_return") for r in rows])
+            delta = None
+            if cur["mean"] is not None and sl["mean"] is not None:
+                delta = (sl["mean"] - cur["mean"]) * 100.0
+            out.append({
+                "dimension": key,
+                "bucket": label,
+                "n": len(rows),
+                "current": cur,
+                "stoploss": sl,
+                "delta_mean_pp": delta,
+                "small_sample": len(rows) < 5,
+            })
+    return out
+
+
 # ---------------------------------------------------------------------------
 # 对外接口
 # ---------------------------------------------------------------------------
@@ -256,6 +334,7 @@ def analyze() -> dict[str, Any]:
                 "stoploss": {"n": 0, "win_rate": None, "mean": None, "median": None},
                 "delta_mean_pp": None,
             },
+            "by_env": [],
             "trades": [],
             "caveats": CAVEATS,
         })
@@ -329,6 +408,7 @@ def analyze() -> dict[str, Any]:
             "stoploss": stoploss_stats,
             "delta_mean_pp": delta,
         },
+        "by_env": _group_summary(rows),
         "trades": rows,
         "caveats": CAVEATS,
     }

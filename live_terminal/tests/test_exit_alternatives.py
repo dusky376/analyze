@@ -85,3 +85,60 @@ def test_core_logic_is_readonly_pure_functions():
     row_ok2 = {**row_ok, "close": 9.80, "date": "2026-11-18"}
     got = EA.try_close(row_ok2)
     assert got is not None and got["price"] == 9.80
+
+
+# ---------------------------------------------------------------------------
+# 按环境分组（by_env）
+# ---------------------------------------------------------------------------
+
+_DIM_KEYS = {"break_limit_down", "gate", "high_avg_ret", "high_limit_down_share"}
+
+
+def test_by_env_present_and_well_formed(report):
+    groups = report["by_env"]
+    assert isinstance(groups, list) and groups
+    for g in groups:
+        for k in ("dimension", "bucket", "n", "current", "stoploss",
+                  "delta_mean_pp", "small_sample"):
+            assert k in g
+        assert g["dimension"] in _DIM_KEYS
+        assert isinstance(g["n"], int) and g["n"] >= 1
+        # small_sample 必须与 n<5 一致
+        assert g["small_sample"] is (g["n"] < 5)
+
+
+def test_by_env_buckets_cover_all_trades_without_overlap(report):
+    """每个维度的 n 之和必须等于该维度可判定笔数（<= 总笔数）。"""
+    for dim in _DIM_KEYS:
+        total = sum(g["n"] for g in report["by_env"] if g["dimension"] == dim)
+        assert total <= report["n"], f"{dim} 分组重复计数：{total} > {report['n']}"
+    # break_limit_down 是必判字段（每笔都有断板日），应覆盖全部
+    brk = [g for g in report["by_env"] if g["dimension"] == "break_limit_down"]
+    if brk:
+        assert sum(g["n"] for g in brk) == report["n"]
+
+
+def test_by_env_delta_consistent(report):
+    for g in report["by_env"]:
+        if g["delta_mean_pp"] is None:
+            assert g["current"]["mean"] is None or g["stoploss"]["mean"] is None
+            continue
+        expect = (g["stoploss"]["mean"] - g["current"]["mean"]) * 100.0
+        assert g["delta_mean_pp"] == pytest.approx(expect, abs=1e-6)
+
+
+def test_bucket_mapping_labels():
+    """分组标签映射：None 不进组，边界值判定正确。"""
+    def t(**ctx):
+        return {"context": ctx}
+    assert EA._bucket(t(break_is_limit_down=True), "break_limit_down") == "断板跌停"
+    assert EA._bucket(t(break_is_limit_down=False), "break_limit_down") == "断板未跌停"
+    assert EA._bucket(t(break_is_limit_down=None), "break_limit_down") is None
+    assert EA._bucket(t(gate_blocked=True), "gate") == "闸门拦截"
+    assert EA._bucket(t(gate_blocked=False), "gate") == "闸门通过"
+    assert EA._bucket(t(high_avg_ret=0.5), "high_avg_ret") == "昨日高标均涨>0"
+    assert EA._bucket(t(high_avg_ret=0.0), "high_avg_ret") == "昨日高标均涨≤0"
+    assert EA._bucket(t(high_avg_ret=None), "high_avg_ret") is None
+    assert EA._bucket(t(high_limit_down_share=0.2), "high_limit_down_share") == "高标跌停占比≥20%"
+    assert EA._bucket(t(high_limit_down_share=0.1), "high_limit_down_share") == "高标跌停占比<20%"
+    assert EA._bucket(t(), "unknown_dim") is None

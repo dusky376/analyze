@@ -338,8 +338,50 @@ function renderExitAlternatives(d) {
     </tr>`;
   }).join("") || `<tr><td colspan="6" class="empty">暂无已结算样本。</td></tr>`;
 
+  renderEnvGroups(d.by_env || [], d.n);
+
   $("#exitAltCaveats").innerHTML = (d.caveats || []).map((x) => `<li>${esc(x)}</li>`).join("") ||
     "<li>暂无边界声明。</li>";
+}
+
+// 按环境分组汇总：让"改善来自哪类情况"一眼可见。
+const ENV_DIM_LABEL = {
+  break_limit_down: "断板是否跌停",
+  gate: "情绪闸门",
+  high_avg_ret: "昨日高标均涨",
+  high_limit_down_share: "高标跌停占比",
+};
+
+function renderEnvGroups(groups, totalN) {
+  const box = $("#exitEnvGroups");
+  if (!box) return;
+  if (!groups.length) {
+    box.innerHTML = `<div class="empty-card">暂无环境分组数据。</div>`;
+    return;
+  }
+  // 按维度归并，每个维度一张小表
+  const byDim = {};
+  for (const g of groups) (byDim[g.dimension] ||= []).push(g);
+  box.innerHTML = Object.entries(byDim).map(([dim, rows]) => {
+    const label = ENV_DIM_LABEL[dim] || dim;
+    return `<div class="env-group">
+      <h4>${esc(label)}</h4>
+      <table>
+        <thead><tr>
+          <th>分组</th><th class="num">笔数</th><th class="num">现行均值</th>
+          <th class="num">止损模拟</th><th class="num">改善</th>
+        </tr></thead>
+        <tbody>${rows.map((g) => `<tr>
+          <td>${esc(g.bucket)}${g.small_sample ? ' <span class="tag unknown">样本少</span>' : ""}</td>
+          <td class="num">${fmtInt(g.n)}</td>
+          <td class="num ${cls(g.current && g.current.mean)}">${fmtPct(g.current && g.current.mean)}</td>
+          <td class="num ${cls(g.stoploss && g.stoploss.mean)}">${fmtPct(g.stoploss && g.stoploss.mean)}</td>
+          <td class="num ${cls(g.delta_mean_pp)}">${has(g.delta_mean_pp) ? `${Number(g.delta_mean_pp) >= 0 ? "+" : ""}${Number(g.delta_mean_pp).toFixed(1)}pp` : "—"}</td>
+        </tr>`).join("")}</tbody>
+      </table>
+      ${rows.some((g) => g.small_sample) ? '<p class="muted">含「样本少」组（n&lt;5），其改善幅度不可当结论。</p>' : ""}
+    </div>`;
+  }).join("") + `<p class="muted">共 ${fmtInt(totalN)} 笔；分组为描述性切分，未做显著性检验，分组越多偶然越大。</p>`;
 }
 
 /* ------------------------------------------------------------------- load */

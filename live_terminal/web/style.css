@@ -158,8 +158,17 @@ td.empty { text-align: center; color: var(--muted); padding: 26px; }
 .member .why { color: var(--muted); font-size: 11px; max-width: 55%; text-align: right; }
 .empty-card { color: var(--muted); font-size: 12px; padding: 10px 0; }
 
-.summary-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }
-.summary-chip {
+/* ---------------- env groups (卖法对照·按环境分组) ---------------- */
+.env-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-top: 10px; }
+.env-group { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: rgba(255,255,255,.012); }
+.env-group h4 { margin: 0 0 8px; font-size: 13px; color: var(--gold2); }
+.env-group table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.env-group th { text-align: left; color: var(--muted); font-weight: 500; padding: 4px 6px; border-bottom: 1px solid var(--line); }
+.env-group td { padding: 4px 6px; border-bottom: 1px dashed rgba(255,255,255,.04); }
+.env-group th.num, .env-group td.num { text-align: right; }
+.env-group p.muted { margin: 6px 0 0; font-size: 11px; }
+
+.summary-row { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 14px; }.summary-chip {
   border: 1px solid var(--line); border-radius: 10px; padding: 9px 13px; font-size: 12px;
   background: rgba(255,255,255,.015);
 }
