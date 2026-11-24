@@ -156,9 +156,15 @@ def pair_groups(orders: list[dict[str, Any]]) -> dict[str, Any]:
     只有组内**同时存在 rabbit 与 turtle** 才算真配对；行业缺失不强行凑对。
     返回纯描述性结果，不产生任何信号。
     """
+    # 2026-11-24 用户反馈「显示这么多未配对」：旧口径按涨停池 industry
+    # （申万行业）分组，与悟空真经实际选股口径（题材轴 guitu_theme）不一致
+    # ——算力题材横跨环保设备/装修装饰/化学原料/IT服务，按行业永远配不上。
+    # 现在优先用 `guitu_theme`（选股时的题材），industry 只作兜底。
     buckets: dict[tuple[str, str], list[dict[str, Any]]] = defaultdict(list)
     for o in orders:
-        buckets[(str(o.get("day") or ""), str(o.get("industry") or ""))].append(o)
+        day = str(o.get("day") or "")
+        theme = str(o.get("guitu_theme") or o.get("industry") or "")
+        buckets[(day, theme)].append(o)
 
     pairs: list[dict[str, Any]] = []
     unpaired: list[dict[str, Any]] = []
@@ -172,13 +178,14 @@ def pair_groups(orders: list[dict[str, Any]]) -> dict[str, Any]:
         rabbits = [brief(o) for o in rows if (o.get("guitu") or {}).get("role") == "rabbit"]
         turtles = [brief(o) for o in rows if (o.get("guitu") or {}).get("role") == "turtle"]
         rec: dict[str, Any] = {
-            "day": day, "industry": industry or "（行业缺失）",
+            "day": day, "industry": industry or "（题材缺失）",
             "n": len(rows), "rabbits": rabbits, "turtles": turtles,
             "is_pair": bool(rabbits and turtles and industry),
-            "note": "同身位由 B1 只收 streak==2 保证；题材用涨停池 industry 近似",
+            "note": ("同身位由 B1 只收 streak==2 保证；"
+                     "题材优先用选股时的 guitu_theme（题材轴），缺失才用 industry 兜底"),
         }
         if not industry:
-            rec["unpaired_reason"] = "行业字段缺失，不强行按题材配对"
+            rec["unpaired_reason"] = "题材字段缺失，不强行按行业配对"
         elif not (rabbits and turtles):
             rec["unpaired_reason"] = ("组内未同时出现兔子与乌龟"
                                       "（真实市场并非每天都有龟兔配对，不硬凑）")

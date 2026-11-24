@@ -201,10 +201,16 @@ function renderTodayOrders(rows, day) {
     body.innerHTML = `<tr><td colspan="9" class="empty">${esc(fmtDay(day))} 无排板委托 —— 当日策略未开仓，不回退展示历史单。</td></tr>`;
     return;
   }
+  // 记住当前展开的股票，重建表格后恢复（60 秒轮询会重绘表格）
+  const openCode = (typeof inlineChart !== "undefined" && inlineChart.code) || null;
+  const openTab = (typeof inlineChart !== "undefined" && inlineChart.tab) || "kline";
+  if (typeof closeInlineChart === "function") closeInlineChart();
+
   body.innerHTML = rows.map((o) => {
     const g = o.guitu || {};
     const reason = o.fill_reason || o.state_note || (o.queue_sim && o.queue_sim.detail) || "—";
-    return `<tr class="chart-row" data-code="${esc(o.ts_code)}" data-name="${esc(o.name)}" title="点击查看该股 K 线 + 分时">
+    const sel = openCode && String(o.ts_code) === String(openCode) ? " selected" : "";
+    return `<tr class="chart-row${sel}" data-code="${esc(o.ts_code)}" data-name="${esc(o.name)}" title="点击查看该股 K 线 + 分时">
       <td><div class="name">${esc(o.name || "—")}</div><div class="code">${esc(o.ts_code || "")}</div></td>
       <td>${esc(o.guitu_theme || o.industry || g.industry || "—")}${
         o.guitu_theme && o.industry ? `<div class="code">${esc(o.industry)}</div>` : ""}</td>
@@ -219,53 +225,120 @@ function renderTodayOrders(rows, day) {
       <td class="muted">${esc(reason)}</td>
     </tr>`;
   }).join("");
-  // 点击行 → 展开该股 K 线 + 分时
+  // 点击行 → 在该行下方内嵌展开 K线/分时（再点收起，支持切换其他股票）
   body.querySelectorAll("tr.chart-row").forEach((tr) => {
     tr.addEventListener("click", () => {
       const code = tr.getAttribute("data-code");
       const name = tr.getAttribute("data-name");
-      if (code) loadChart(code, name);
+      if (code) toggleInlineChart(tr, code, name);
     });
   });
+  // 恢复轮询前展开的那只股票
+  if (openCode) {
+    const prev = Array.from(body.querySelectorAll("tr.chart-row"))
+      .find(tr => String(tr.getAttribute("data-code")) === String(openCode));
+    if (prev) {
+      toggleInlineChart(prev, openCode, prev.getAttribute("data-name"));
+      if (openTab === "intraday") {
+        const tabBtn = prev.nextElementSibling?.querySelector('.chart-tab[data-tab="intraday"]');
+        if (tabBtn) tabBtn.click();
+      }
+    }
+  }
 }
 
 
-/* ------------------------------------------------------- 个股 K线 + 分时 */
-let chartState = { code: null, name: null, day: null, timer: null };
+/* ------------------------------------------------------- 个股 K线 + 分时（行内展开） */
+let inlineChart = { tr: null, code: null, timer: null, tab: "kline", data: null };
 
-async function loadChart(code, name) {
-  chartState.code = code;
-  chartState.name = name;
-  const panel = $("#chartPanel");
-  if (!panel) return;
-  panel.classList.remove("hidden");
-  $("#chartTitle").textContent = `${name || code}（${code}） · 走势`;
-  $("#chartMeta").textContent = "正在读取真实日线与分时留档…";
-  await refreshChart();
-  // 盘中每轮跟随主轮询刷新（图表自身也刷）
-  if (chartState.timer) clearInterval(chartState.timer);
-  chartState.timer = setInterval(() => {
-    if (chartState.code) refreshChart();
+function closeInlineChart() {
+  if (inlineChart.timer) { clearInterval(inlineChart.timer); inlineChart.timer = null; }
+  if (inlineChart.tr) {
+    const next = inlineChart.tr.nextElementSibling;
+    if (next && next.classList.contains("chart-detail-row")) next.remove();
+    inlineChart.tr.classList.remove("selected");
+  }
+  inlineChart = { tr: null, code: null, timer: null, tab: "kline", data: null };
+}
+
+function toggleInlineChart(tr, code, name) {
+  // 已展开同一行 → 收起；否则关掉旧的、展开新的
+  if (inlineChart.tr === tr) { closeInlineChart(); return; }
+  closeInlineChart();
+
+  inlineChart.tr = tr;
+  inlineChart.code = code;
+  inlineChart.tab = "kline";
+  tr.classList.add("selected");
+
+  const detail = document.createElement("tr");
+  detail.className = "chart-detail-row";
+  detail.innerHTML = `<td colspan="10">
+    <div class="chart-inline">
+      <div class="chart-inline-head">
+        <b>${esc(name || code)}（${esc(code)}）· 走势</b>
+        <div class="chart-tabs">
+          <button type="button" class="chart-tab active" data-tab="kline">日 K 线</button>
+          <button type="button" class="chart-tab" data-tab="intraday">当日分时</button>
+        </div>
+        <button type="button" class="chart-close">关闭</button>
+      </div>
+      <div class="chart-inline-meta muted" id="chartMetaInline">载入中…</div>
+      <canvas class="chart-canvas" width="900" height="280"></canvas>
+    </div>
+  </td>`;
+  tr.after(detail);
+
+  detail.querySelectorAll(".chart-tab").forEach((b) => {
+    b.addEventListener("click", () => {
+      inlineChart.tab = b.getAttribute("data-tab");
+      detail.querySelectorAll(".chart-tab").forEach(x => x.classList.toggle("active", x === b));
+      renderInlineChart();
+    });
+  });
+  detail.querySelector(".chart-close").addEventListener("click", closeInlineChart);
+
+  refreshInlineChart();
+  if (inlineChart.timer) clearInterval(inlineChart.timer);
+  inlineChart.timer = setInterval(() => {
+    if (inlineChart.code) refreshInlineChart();
   }, 60000);
 }
 
-async function refreshChart() {
-  if (!chartState.code) return;
+async function refreshInlineChart() {
+  if (!inlineChart.code) return;
   try {
     const d = await getJSON(
-      `/api/chart?code=${encodeURIComponent(chartState.code)}&kdays=40`, 90000);
+      `/api/chart?code=${encodeURIComponent(inlineChart.code)}&kdays=40`, 90000);
     if (!d || !d.available) {
-      $("#chartMeta").textContent = (d && (d.kline?.reason || d.intraday?.reason)) || "图表数据不可用";
+      const m = $("#chartMetaInline");
+      if (m) m.textContent = (d && (d.kline?.reason || d.intraday?.reason)) || "图表数据不可用";
       return;
     }
-    $("#chartMeta").textContent =
-      `K 线 ${d.kline.bars?.length || 0} 根 · 分时 ${d.intraday.n || 0} 点 · ${esc(d.generated_at)}`;
-    $("#chartKLive").textContent = d.kline.live ? `盘中实时 @${fmtTs(d.kline.as_of)}` : "已收盘定格";
-    $("#chartILive").textContent = d.intraday.live ? "末点实时价" : "留档快照";
-    drawKline($("#klineCanvas"), d.kline.bars || []);
-    drawIntraday($("#intradayCanvas"), d.intraday.points || []);
+    inlineChart.data = d;
+    renderInlineChart();
   } catch (err) {
-    $("#chartMeta").textContent = `读取失败：${String(err && err.message ? err.message : err)}`;
+    const m = $("#chartMetaInline");
+    if (m) m.textContent = `读取失败：${String(err && err.message ? err.message : err)}`;
+  }
+}
+
+function renderInlineChart() {
+  const d = inlineChart.data;
+  if (!d || !inlineChart.tr) return;
+  const detail = inlineChart.tr.nextElementSibling;
+  if (!detail) return;
+  const meta = detail.querySelector(".chart-inline-meta");
+  const canvas = detail.querySelector(".chart-canvas");
+  if (!canvas) return;
+  if (inlineChart.tab === "kline") {
+    if (meta) meta.textContent =
+      `K 线 ${d.kline.bars?.length || 0} 根 · ${d.kline.live ? "盘中实时 @" + fmtTs(d.kline.as_of) : "已收盘定格"} · ${esc(d.generated_at)}`;
+    drawKline(canvas, d.kline.bars || []);
+  } else {
+    if (meta) meta.textContent =
+      `分时 ${d.intraday.n || 0} 点（${d.intraday.live ? "末点实时价" : "留档快照"}）· ${esc(d.generated_at)}`;
+    drawIntraday(canvas, d.intraday.points || []);
   }
 }
 

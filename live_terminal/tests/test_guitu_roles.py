@@ -147,7 +147,10 @@ def test_pair_groups_true_pair_and_missing_industry() -> None:
     assert out["n_pairs"] == 1
     p = out["pairs"][0]
     assert p["industry"] == "机器人" and len(p["rabbits"]) == 1 and len(p["turtles"]) == 1
-    assert any("行业字段缺失" in x["unpaired_reason"] for x in out["unpaired"])
+    # 2026-11-24：分组口径从 industry 改为 guitu_theme（题材优先），文案同步
+    assert any(("题材字段缺失" in x["unpaired_reason"]
+                or "行业字段缺失" in x["unpaired_reason"])
+               for x in out["unpaired"])
 
 
 def test_summarize_roles_is_descriptive() -> None:

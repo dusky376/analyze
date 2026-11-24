@@ -506,6 +506,17 @@ def advance_fills(state: dict[str, Any],
     for oid, o in list(state.get("orders", {}).items()):
         if not oid.startswith(prefix):
             continue
+        # 2026-11-24 用户裁定：矛盾单以精确模拟为准。
+        # 已标 filled 的单也要复核：若 queue_sim 明确说 queued_unfilled，
+        # 说明当初是二元判定（数据不全时）误判成交，必须以精确模拟纠正，
+        # 且不回退为已成交（避免每次 sync 又误标回去）。
+        prior_sim = o.get("queue_sim") or {}
+        if o.get("status") == "filled" and prior_sim.get("status") == "queued_unfilled":
+            o.update(status="queued_unfilled",
+                     fill_price=None, fill_frame_ts=None, fill_round=None,
+                     fill_confidence="none",
+                     fill_reason="[以精确模拟为准] " + str(prior_sim.get("detail") or "封单未吃穿"))
+            continue
         if o.get("status") == "filled":
             continue                                  # 已成交不回退
         b0 = o.get("broken_at_entry")
@@ -545,6 +556,17 @@ def advance_fills(state: dict[str, Any],
                 continue
         except Exception:  # noqa: BLE001
             pass
+
+        # 2026-11-24 用户裁定：矛盾单**以精确模拟为准**。
+        # 若已有 queue_sim 且它明确说 queued_unfilled（封单没吃穿），
+        # 就不再走二元判定（开板即成交）——二元判定是数据缺失时的粗略回退，
+        # 不能推翻后来算出的精确结论（如江顺科技：二元说成交、精确说未排到）。
+        prior_sim = o.get("queue_sim") or {}
+        if prior_sim.get("status") == "queued_unfilled":
+            o.update(status="queued_unfilled",
+                     fill_reason=prior_sim.get("detail") or "精确模拟：封单未吃穿，排板未成交",
+                     fill_confidence="none")
+            continue
 
         filled = False
         for i in range(i0 + 1, len(maps)):
