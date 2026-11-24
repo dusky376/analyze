@@ -145,10 +145,15 @@ function renderLiveSim(d) {
   }
 
   const rules = $("#rules");
+  // core_definition 是对象（{core, board, rabbit, ...}），取「核心」本意的
+  // core 字段；直接渲染整个对象会变成 "[object Object]"（2026-11-24 用户实测）。
+  const coreText = typeof d.core_definition === "object" && d.core_definition
+    ? d.core_definition.core
+    : d.core_definition;
   rules.innerHTML = [
     ["买点", d.entry_rule],
     ["卖点", d.exit_rule],
-    ["核心", d.core_definition],
+    ["核心", coreText],
   ].filter(([, v]) => v).map(([k, v]) => `<span>${esc(k)}：${esc(v)}</span>`).join("");
 
   $("#todayMeta").textContent =
