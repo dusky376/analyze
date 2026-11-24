@@ -158,6 +158,16 @@ td.empty { text-align: center; color: var(--muted); padding: 26px; }
 .member .why { color: var(--muted); font-size: 11px; max-width: 55%; text-align: right; }
 .empty-card { color: var(--muted); font-size: 12px; padding: 10px 0; }
 
+/* ---------------- 个股 K线 + 分时 ---------------- */
+.chart-panel { margin-top: 14px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255,255,255,.012); }
+.chart-panel.hidden { display: none; }
+.chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.chart-box { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; background: rgba(0,0,0,.15); }
+.chart-box h4 { margin: 0 0 8px; font-size: 13px; color: var(--gold2); display: flex; align-items: center; gap: 8px; }
+.chart-box canvas { width: 100%; height: auto; display: block; }
+tr.chart-row { cursor: pointer; }
+tr.chart-row:hover { background: rgba(216,168,78,.08); }
+
 /* ---------------- env groups (卖法对照·按环境分组) ---------------- */
 .env-groups { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; margin-top: 10px; }
 .env-group { border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; background: rgba(255,255,255,.012); }

@@ -81,6 +81,23 @@
         <tbody id="todayBody"><tr><td colspan="10" class="empty">载入中…</td></tr></tbody>
       </table>
     </div>
+    <!-- 点击表格中的股票行 → 展开该股 K 线 + 分时（盘中实时） -->
+    <div id="chartPanel" class="chart-panel hidden">
+      <div class="panel-head">
+        <h2 id="chartTitle">个股走势</h2>
+        <p class="muted" id="chartMeta">K 线（日）+ 分时（盘中实时快照线）</p>
+      </div>
+      <div class="chart-grid">
+        <div class="chart-box">
+          <h4>日 K 线 <span class="tag unknown" id="chartKLive"></span></h4>
+          <canvas id="klineCanvas" width="560" height="260"></canvas>
+        </div>
+        <div class="chart-box">
+          <h4>当日分时 <span class="tag unknown" id="chartILive"></span></h4>
+          <canvas id="intradayCanvas" width="560" height="260"></canvas>
+        </div>
+      </div>
+    </div>
     <div class="grid-2" id="pairsWrap"></div>
   </section>
 

@@ -204,7 +204,7 @@ function renderTodayOrders(rows, day) {
   body.innerHTML = rows.map((o) => {
     const g = o.guitu || {};
     const reason = o.fill_reason || o.state_note || (o.queue_sim && o.queue_sim.detail) || "—";
-    return `<tr>
+    return `<tr class="chart-row" data-code="${esc(o.ts_code)}" data-name="${esc(o.name)}" title="点击查看该股 K 线 + 分时">
       <td><div class="name">${esc(o.name || "—")}</div><div class="code">${esc(o.ts_code || "")}</div></td>
       <td>${esc(o.guitu_theme || o.industry || g.industry || "—")}${
         o.guitu_theme && o.industry ? `<div class="code">${esc(o.industry)}</div>` : ""}</td>
@@ -219,6 +219,126 @@ function renderTodayOrders(rows, day) {
       <td class="muted">${esc(reason)}</td>
     </tr>`;
   }).join("");
+  // 点击行 → 展开该股 K 线 + 分时
+  body.querySelectorAll("tr.chart-row").forEach((tr) => {
+    tr.addEventListener("click", () => {
+      const code = tr.getAttribute("data-code");
+      const name = tr.getAttribute("data-name");
+      if (code) loadChart(code, name);
+    });
+  });
+}
+
+
+/* ------------------------------------------------------- 个股 K线 + 分时 */
+let chartState = { code: null, name: null, day: null, timer: null };
+
+async function loadChart(code, name) {
+  chartState.code = code;
+  chartState.name = name;
+  const panel = $("#chartPanel");
+  if (!panel) return;
+  panel.classList.remove("hidden");
+  $("#chartTitle").textContent = `${name || code}（${code}） · 走势`;
+  $("#chartMeta").textContent = "正在读取真实日线与分时留档…";
+  await refreshChart();
+  // 盘中每轮跟随主轮询刷新（图表自身也刷）
+  if (chartState.timer) clearInterval(chartState.timer);
+  chartState.timer = setInterval(() => {
+    if (chartState.code) refreshChart();
+  }, 60000);
+}
+
+async function refreshChart() {
+  if (!chartState.code) return;
+  try {
+    const d = await getJSON(
+      `/api/chart?code=${encodeURIComponent(chartState.code)}&kdays=40`, 90000);
+    if (!d || !d.available) {
+      $("#chartMeta").textContent = (d && (d.kline?.reason || d.intraday?.reason)) || "图表数据不可用";
+      return;
+    }
+    $("#chartMeta").textContent =
+      `K 线 ${d.kline.bars?.length || 0} 根 · 分时 ${d.intraday.n || 0} 点 · ${esc(d.generated_at)}`;
+    $("#chartKLive").textContent = d.kline.live ? `盘中实时 @${fmtTs(d.kline.as_of)}` : "已收盘定格";
+    $("#chartILive").textContent = d.intraday.live ? "末点实时价" : "留档快照";
+    drawKline($("#klineCanvas"), d.kline.bars || []);
+    drawIntraday($("#intradayCanvas"), d.intraday.points || []);
+  } catch (err) {
+    $("#chartMeta").textContent = `读取失败：${String(err && err.message ? err.message : err)}`;
+  }
+}
+
+function drawKline(canvas, bars) {
+  if (!canvas || !bars.length) return;
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  if (!bars.length) return;
+  const pad = 30, cw = (W - pad * 2) / bars.length;
+  const hi = Math.max(...bars.map(b => b.high || 0));
+  const lo = Math.min(...bars.map(b => b.low || Infinity));
+  const rng = (hi - lo) || 1;
+  const y = (v) => pad + (H - pad * 2) * (1 - (v - lo) / rng);
+  // 网格
+  ctx.strokeStyle = "rgba(255,255,255,.08)"; ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const yy = pad + (H - pad * 2) * i / 4;
+    ctx.beginPath(); ctx.moveTo(pad, yy); ctx.lineTo(W - pad, yy); ctx.stroke();
+  }
+  bars.forEach((b, i) => {
+    const x = pad + cw * i + cw / 2;
+    const up = (b.close || 0) >= (b.open || 0);
+    ctx.strokeStyle = ctx.fillStyle = up ? "#38c98b" : "#ec6a6a";
+    // 影线
+    ctx.beginPath(); ctx.moveTo(x, y(b.high)); ctx.lineTo(x, y(b.low)); ctx.stroke();
+    // 实体
+    const top = y(Math.max(b.open, b.close));
+    const bot = y(Math.min(b.open, b.close));
+    ctx.fillRect(x - Math.max(1, cw * 0.3), top,
+                 Math.max(2, cw * 0.6), Math.max(1, bot - top));
+  });
+  ctx.fillStyle = "rgba(255,255,255,.55)"; ctx.font = "11px sans-serif";
+  ctx.fillText(`最高 ${hi.toFixed(2)}`, 4, 14);
+  ctx.fillText(`最低 ${lo.toFixed(2)}`, 4, H - 4);
+  ctx.fillText(`${bars[0].date}`, pad, H - 4);
+  ctx.fillText(`${bars[bars.length-1].date}${bars[bars.length-1].live ? " (盘中)" : ""}`,
+               W - 130, H - 4);
+}
+
+function drawIntraday(canvas, pts) {
+  if (!canvas || !pts.length) return;
+  const ctx = canvas.getContext("2d");
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+  const pad = 30;
+  const vals = pts.map(p => p.price).filter(v => Number.isFinite(v));
+  if (!vals.length) return;
+  const hi = Math.max(...vals), lo = Math.min(...vals);
+  const rng = (hi - lo) || 1;
+  const y = (v) => pad + (H - pad * 2) * (1 - (v - lo) / rng);
+  const x = (i) => pad + (W - pad * 2) * (i / Math.max(1, pts.length - 1));
+  ctx.strokeStyle = "rgba(255,255,255,.08)"; ctx.lineWidth = 1;
+  for (let i = 0; i <= 4; i++) {
+    const yy = pad + (H - pad * 2) * i / 4;
+    ctx.beginPath(); ctx.moveTo(pad, yy); ctx.lineTo(W - pad, yy); ctx.stroke();
+  }
+  ctx.strokeStyle = "#e0b552"; ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  pts.forEach((p, i) => {
+    const px = x(i), py = y(p.price);
+    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  });
+  ctx.stroke();
+  // 末点高亮（实时价）
+  const last = pts[pts.length - 1];
+  ctx.fillStyle = last.live ? "#38c98b" : "#e0b552";
+  ctx.beginPath(); ctx.arc(x(pts.length - 1), y(last.price), 3.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = "rgba(255,255,255,.55)"; ctx.font = "11px sans-serif";
+  ctx.fillText(`高 ${hi.toFixed(2)}`, 4, 14);
+  ctx.fillText(`低 ${lo.toFixed(2)}`, 4, H - 4);
+  ctx.fillText(`${pts[0].t}`, pad, H - 4);
+  ctx.fillText(`${last.t}${last.live ? " (实时)" : ""}`, W - 90, H - 4);
 }
 
 function renderPairs(pairs, day) {

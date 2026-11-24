@@ -36,9 +36,9 @@ from typing import Any, Callable
 import polars as pl
 from flask import Flask, Response, jsonify, request, send_from_directory
 
-from backend import (data_health, exit_alternatives, feeds, guitu_backtest, guitu_cases,
-                     ice_samples, leader_ladder, live_sim, market_clock, queue_match,
-                     recorder)
+from backend import (charts, data_health, exit_alternatives, feeds, guitu_backtest,
+                     guitu_cases, ice_samples, leader_ladder, live_sim, market_clock,
+                     queue_match, recorder)
 from backend.json_safe import sanitize
 
 ROOT = Path(__file__).resolve().parent
@@ -267,6 +267,25 @@ def api_exit_alternatives() -> Response:
     """
     return api_guard(lambda: cached_copy("exit_alternatives", 300.0,
                                          exit_alternatives.analyze))
+
+
+@app.get("/api/chart")
+def api_chart() -> Response:
+    """个股 K 线 + 分时（盘中实时）：?code=002931&day=20261124&kdays=40。
+
+    全部真实落盘；盘中 K 线最后一根为内存实时 bar、分末点为实时价，
+    前端每轮轮询刷新。不写盘、不下单。
+    """
+    code = str(request.args.get("code") or "").strip()
+    if not code or not code.isdigit():
+        return jsonify({"ok": False, "error": "code 必须是 6 位数字"}), 400
+    day = request.args.get("day") or None
+    try:
+        kdays = int(request.args.get("kdays") or 40)
+    except (TypeError, ValueError):
+        kdays = 40
+    kdays = max(5, min(250, kdays))
+    return api_guard(lambda: charts.stock_chart(code, day=day, kdays=kdays))
 
 
 @app.get("/api/ice-samples")
