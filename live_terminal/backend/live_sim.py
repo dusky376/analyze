@@ -1569,60 +1569,105 @@ def _emotion_payload_from(gate: dict[str, Any] | None, day: str) -> dict[str, An
 
 def _account_snapshot(state: dict[str, Any], positions: list[dict[str, Any]],
                       day: str) -> dict[str, Any]:
-    """交易软件式账户面板（用户 2026-11-24 要求：总金额/可用/持仓/当日盈亏）。
+    """交易软件式账户面板（用户 2026-11-24 二次裁定）：
+    「总金额应该是可用加持仓金额，盘中实时价加进去」。
 
-    总资金 100 万（用户裁定）；模拟口径：
-      * 总金额   = CAPITAL_YUAN（固定 100 万，模拟盘不随盈亏变动本金；
-                  盈亏体现在「今日盈亏/累计盈亏」里）
-      * 持仓金额 = holding 的 notional 合计（按买入成本计，当日市值变化
-                  不计入——盘中拿不到实时价，如实用成本口径并注明）
-      * 可用金额 = 总金额 − 持仓金额（含已下单未成交的部分吗？不：
-                  queued 未成交未占用，成交才扣）
-      * 当日盈亏 = 当日已结算 trades 的盈亏 + 持仓中当日买入的（暂无市值
-                  变化 = 0）→ 即当日平仓实现的盈亏（成本口径）
+    口径（对齐交易软件）：
+      * 持仓市值 = Σ(盘中实时价 × qty)；实时价取当日 quotes 留档最新帧
+        （recorder 每 5 分钟落一帧全市场快照）；拿不到实时价退回买入成本价，
+        并在 note 标注退回了几只。
+      * 总金额   = 可用金额 + 持仓市值（盈亏自然滚入总资产，和交易软件一致）
+      * 可用金额 = 初始本金 100 万 − 持仓买入成本 + 已实现盈亏
+        （卖出回笼的资金含盈亏）
+      * 浮动盈亏 = Σ(实时价 − 买入价) × qty
+      * 当日盈亏 = 当日平仓实现盈亏 + 持仓浮动盈亏中「今日买入部分」的成本价差
+        （T+1 无当日平仓；今日买入的票若已涨停，价差即浮盈）
+      * 累计盈亏 = 已实现盈亏合计 + 当前持仓浮动盈亏
     """
-    capital = CAPITAL_YUAN
+    import polars as _pl
+    from pathlib import Path as _P
+
+    # 盘中实时价：当日 quotes 最新帧
+    px_map: dict[str, float] = {}
+    px_stale = True
+    try:
+        qdir = (_P(__file__).resolve().parents[1] / "data" / "live"
+                / str(day) / "quotes")
+        snaps = sorted(qdir.glob("quotes_*.parquet"))
+        if snaps:
+            df = _pl.read_parquet(snaps[-1])
+            for r in df.iter_rows(named=True):
+                c = str(r.get("ts_code") or "").zfill(6)
+                p = r.get("price")
+                if c and p:
+                    px_map[c] = float(p)
+            px_stale = False
+    except Exception:  # noqa: BLE001 - 无留档则全部退回成本价
+        px_map = {}
+
     holding = [p for p in positions if p.get("status") != "closed"]
-    pos_amount = sum(float(p.get("notional") or 0.0) for p in holding)
-    available = max(0.0, capital - pos_amount)
+    cost_amount = 0.0
+    mv_amount = 0.0          # 持仓市值（实时价）
+    float_pnl = 0.0
+    today_float_pnl = 0.0
+    n_px_cost = 0            # 退回成本价的持仓数
+    for p in holding:
+        qty = p.get("qty")
+        cost = float(p.get("entry_price") or 0.0)
+        c = str(p.get("ts_code") or "").zfill(6)
+        px = px_map.get(c)
+        if px is None or px <= 0:
+            px = cost
+            n_px_cost += 1
+        n = int(qty) if qty else 0
+        if n <= 0 and cost > 0:
+            # 历史持仓缺 qty：按 10 万预算反推股数
+            n = max(1, int(100_000.0 / (cost * LOT_SIZE)))
+        cost_amount += cost * n
+        mv_amount += px * n
+        fl = (px - cost) * n
+        float_pnl += fl
+        if str(p.get("entry_date")) == str(day):
+            today_float_pnl += fl
 
-    # 当日盈亏：今日买入且当日已平仓的实现盈亏（T+1 下当天买当天卖不存在，
-    # 所以盘中当日盈亏 = 0 是正确口径；昨日及更早买入的持仓盈亏要等日线）
-    today_pnl = 0.0
-    today_pnl_n = 0
-    for t in state.get("trades") or []:
-        if str(t.get("entry_date")) == str(day):
-            nr = t.get("net_return")
-            if isinstance(nr, (int, float)):
-                # 按 notional 折算金额；缺 notional 用 10 万基准
-                amt = float(t.get("notional") or 0.0) or 100_000.0
-                today_pnl += float(nr) * amt
-                today_pnl_n += 1
-
-    # 累计盈亏：全部已结算 trades
-    total_pnl = 0.0
+    # 已实现盈亏（全部已结算 trades，按各自成交额折算金额）
+    realized = 0.0
+    today_realized = 0.0
     n_closed = 0
     for t in state.get("trades") or []:
         nr = t.get("net_return")
         if isinstance(nr, (int, float)):
             amt = float(t.get("notional") or 0.0) or 100_000.0
-            total_pnl += float(nr) * amt
+            pnl = float(nr) * amt
+            realized += pnl
             n_closed += 1
+            if str(t.get("entry_date")) == str(day):
+                today_realized += pnl
+
+    capital = CAPITAL_YUAN
+    available = capital - cost_amount + realized     # 卖出回笼含盈亏
+    total_amount = available + mv_amount              # 总资产 = 可用 + 持仓市值
 
     return {
-        "capital": capital,
-        "total_amount": capital,
-        "available": round(available, 2),
-        "position_amount": round(pos_amount, 2),
-        "position_pct": round(pos_amount / capital * 100.0, 1) if capital else None,
+        "total_amount": round(total_amount, 2),
+        "available": round(max(0.0, available), 2),
+        "position_amount": round(mv_amount, 2),
+        "position_cost": round(cost_amount, 2),
+        "position_pct": (round(mv_amount / total_amount * 100.0, 1)
+                         if total_amount > 0 else None),
         "n_holding": len(holding),
-        "today_pnl": round(today_pnl, 2),
-        "today_pnl_n": today_pnl_n,
-        "total_pnl": round(total_pnl, 2),
+        "float_pnl": round(float_pnl, 2),
+        "today_pnl": round(today_realized + today_float_pnl, 2),
+        "today_realized": round(today_realized, 2),
+        "today_float": round(today_float_pnl, 2),
+        "total_pnl": round(realized + float_pnl, 2),
+        "realized_pnl": round(realized, 2),
         "total_pnl_n": n_closed,
-        "note": ("持仓金额按买入成本计（盘中拿不到实时市值，不猜）；"
-                 "今日盈亏=当日平仓的实现盈亏（T+1：当日买入不会当日平仓）；"
-                 "累计盈亏=全部已结算 net_return × 各自成交额。"),
+        "px_source": ("quotes 最新帧" if not px_stale else "无留档"),
+        "n_px_cost_fallback": n_px_cost,
+        "note": ("总金额 = 可用 + 持仓市值（盈亏滚入）；持仓按盘中实时价估值"
+                 f"（quotes 留档，{n_px_cost} 只无实时价退回成本价）；"
+                 "当日盈亏 = 当日平仓实现盈亏 + 今日买入持仓的浮动盈亏。"),
     }
 
 
