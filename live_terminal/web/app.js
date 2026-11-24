@@ -188,11 +188,19 @@ function fillRatio(o) {
   }
   return best;
 }
-function ratioCell(o) {
-  const r = fillRatio(o);
-  if (r === null) return `<td class="num muted">—</td>`;
-  const cls2 = r >= 1 ? "up" : r >= 0.5 ? "flat" : "down";
-  return `<td class="num ${cls2}" title="封单消耗比 ${r.toFixed(2)}；≥1 排到">${r.toFixed(2)}</td>`;
+// 持有价值（用户 2026-11-24 要求替换消耗比）：实时价×数量 + 浮盈。
+// 后端 _orders_with_live_value 已注入 live_price/hold_value/hold_pnl/hold_pnl_pct；
+// 未成交单按委托价估值、浮盈 0。
+function valueCell(o) {
+  if (!has(o.hold_value)) return `<td class="num muted">—</td>`;
+  const pnl = has(o.hold_pnl) ? Number(o.hold_pnl) : 0;
+  const pct = has(o.hold_pnl_pct) ? Number(o.hold_pnl_pct) : 0;
+  const tone = pnl > 0 ? "up" : pnl < 0 ? "down" : "flat";
+  const sign = pnl > 0 ? "+" : "";
+  return `<td class="num" title="${esc(o.value_basis || '')} · 现价 ${fmtNum(o.live_price)}">
+    ${fmtInt(o.hold_value)}
+    <div class="code ${tone}">${sign}${fmtInt(pnl)} (${sign}${pct.toFixed(2)}%)</div>
+  </td>`;
 }
 
 function renderTodayOrders(rows, day) {
@@ -218,7 +226,7 @@ function renderTodayOrders(rows, day) {
       <td>${esc(fmtTs(o.entry_frame_ts))}</td>
       <td class="num">${fmtNum(o.entry_price)}</td>
       <td class="num">${fmtInt(o.qty)}</td>
-      ${ratioCell(o)}
+      ${valueCell(o)}
       <td class="num muted" title="${esc(o.budget_reason || "")}">${
         has(o.size_budget_yuan) ? fmtInt(o.size_budget_yuan) : (has(o.notional) ? fmtInt(o.notional) : "—")}</td>
       <td>${statusTag(o.status)}</td>
@@ -338,80 +346,103 @@ function renderInlineChart() {
   } else {
     if (meta) meta.textContent =
       `分时 ${d.intraday.n || 0} 点（${d.intraday.live ? "末点实时价" : "留档快照"}）· ${esc(d.generated_at)}`;
-    drawIntraday(canvas, d.intraday.points || []);
+    drawIntraday(canvas, d.intraday.points || [], d.intraday.prev_close);
   }
 }
+
+/* A 股配色（交易软件习惯）：涨=红 #ef4444 / 跌=绿 #22c55e / 平=白 */
+const UP_COLOR = "#ef4444", DOWN_COLOR = "#22c55e", FLAT_COLOR = "#d4d4d4";
 
 function drawKline(canvas, bars) {
   if (!canvas || !bars.length) return;
   const ctx = canvas.getContext("2d");
   const W = canvas.width, H = canvas.height;
   ctx.clearRect(0, 0, W, H);
-  if (!bars.length) return;
-  const pad = 30, cw = (W - pad * 2) / bars.length;
+  const pad = 42, cw = (W - pad * 2) / bars.length;
   const hi = Math.max(...bars.map(b => b.high || 0));
   const lo = Math.min(...bars.map(b => b.low || Infinity));
   const rng = (hi - lo) || 1;
   const y = (v) => pad + (H - pad * 2) * (1 - (v - lo) / rng);
-  // 网格
-  ctx.strokeStyle = "rgba(255,255,255,.08)"; ctx.lineWidth = 1;
+  // 网格 + 价格刻度
+  ctx.lineWidth = 1;
   for (let i = 0; i <= 4; i++) {
     const yy = pad + (H - pad * 2) * i / 4;
+    ctx.strokeStyle = "rgba(255,255,255,.08)";
     ctx.beginPath(); ctx.moveTo(pad, yy); ctx.lineTo(W - pad, yy); ctx.stroke();
+    const price = hi - rng * i / 4;
+    ctx.fillStyle = "rgba(255,255,255,.45)"; ctx.font = "10px sans-serif";
+    ctx.fillText(price.toFixed(2), 4, yy + 3);
   }
   bars.forEach((b, i) => {
     const x = pad + cw * i + cw / 2;
-    const up = (b.close || 0) >= (b.open || 0);
-    ctx.strokeStyle = ctx.fillStyle = up ? "#38c98b" : "#ec6a6a";
-    // 影线
+    // A股：涨(收盘>=开盘)红色，跌绿色，平白色
+    const color = (b.close || 0) > (b.open || 0) ? UP_COLOR
+      : (b.close || 0) < (b.open || 0) ? DOWN_COLOR : FLAT_COLOR;
+    ctx.strokeStyle = ctx.fillStyle = color;
     ctx.beginPath(); ctx.moveTo(x, y(b.high)); ctx.lineTo(x, y(b.low)); ctx.stroke();
-    // 实体
     const top = y(Math.max(b.open, b.close));
     const bot = y(Math.min(b.open, b.close));
-    ctx.fillRect(x - Math.max(1, cw * 0.3), top,
-                 Math.max(2, cw * 0.6), Math.max(1, bot - top));
+    ctx.fillRect(x - Math.max(1, cw * 0.32), top,
+                 Math.max(2, cw * 0.64), Math.max(1, bot - top));
   });
   ctx.fillStyle = "rgba(255,255,255,.55)"; ctx.font = "11px sans-serif";
-  ctx.fillText(`最高 ${hi.toFixed(2)}`, 4, 14);
-  ctx.fillText(`最低 ${lo.toFixed(2)}`, 4, H - 4);
-  ctx.fillText(`${bars[0].date}`, pad, H - 4);
-  ctx.fillText(`${bars[bars.length-1].date}${bars[bars.length-1].live ? " (盘中)" : ""}`,
-               W - 130, H - 4);
+  ctx.fillText(`高 ${hi.toFixed(2)}  低 ${lo.toFixed(2)}`, pad, 14);
+  ctx.fillText(`${bars[0].date}`, pad, H - 6);
+  const lastB = bars[bars.length - 1];
+  ctx.fillStyle = (lastB.close||0) >= (lastB.open||0) ? UP_COLOR : DOWN_COLOR;
+  ctx.fillText(`${lastB.close?.toFixed(2)}${lastB.live ? " (盘中)" : ""}`, W - 100, 14);
 }
 
-function drawIntraday(canvas, pts) {
+function drawIntraday(canvas, pts, prevClose) {
   if (!canvas || !pts.length) return;
   const ctx = canvas.getContext("2d");
   const W = canvas.width, H = canvas.height;
   ctx.clearRect(0, 0, W, H);
-  const pad = 30;
+  const pad = 42;
   const vals = pts.map(p => p.price).filter(v => Number.isFinite(v));
   if (!vals.length) return;
-  const hi = Math.max(...vals), lo = Math.min(...vals);
+  const pc = prevClose || pts[0].prev_close || pts[0].price;
+  // 交易软件分时：以昨收为中心，上下对称（涨跌停幅度）
+  const maxDev = Math.max(...vals.map(v => Math.abs(v - pc))) || pc * 0.02;
+  const hi = pc + maxDev * 1.05, lo = pc - maxDev * 1.05;
   const rng = (hi - lo) || 1;
   const y = (v) => pad + (H - pad * 2) * (1 - (v - lo) / rng);
   const x = (i) => pad + (W - pad * 2) * (i / Math.max(1, pts.length - 1));
-  ctx.strokeStyle = "rgba(255,255,255,.08)"; ctx.lineWidth = 1;
+  // 网格 + 昨收虚线（基准）
+  ctx.lineWidth = 1;
   for (let i = 0; i <= 4; i++) {
     const yy = pad + (H - pad * 2) * i / 4;
+    ctx.strokeStyle = "rgba(255,255,255,.08)";
     ctx.beginPath(); ctx.moveTo(pad, yy); ctx.lineTo(W - pad, yy); ctx.stroke();
+    const price = hi - rng * i / 4;
+    const pct = (price - pc) / pc * 100;
+    ctx.fillStyle = pct > 0.001 ? UP_COLOR : pct < -0.001 ? DOWN_COLOR : "rgba(255,255,255,.45)";
+    ctx.font = "10px sans-serif";
+    ctx.fillText(`${price.toFixed(2)}`, 4, yy + 3);
+    ctx.fillText(`${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`, W - 46, yy + 3);
   }
-  ctx.strokeStyle = "#e0b552"; ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 4]); ctx.strokeStyle = "rgba(255,255,255,.4)";
+  ctx.beginPath(); ctx.moveTo(pad, y(pc)); ctx.lineTo(W - pad, y(pc)); ctx.stroke();
+  ctx.setLineDash([]);
+  // 价格线：白色（交易软件标准）；收盘相对昨收的涨跌用颜色标注末点
+  ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.6;
   ctx.beginPath();
   pts.forEach((p, i) => {
     const px = x(i), py = y(p.price);
     if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
   });
   ctx.stroke();
-  // 末点高亮（实时价）
   const last = pts[pts.length - 1];
-  ctx.fillStyle = last.live ? "#38c98b" : "#e0b552";
+  const lastColor = last.price > pc ? UP_COLOR : last.price < pc ? DOWN_COLOR : FLAT_COLOR;
+  ctx.fillStyle = lastColor;
   ctx.beginPath(); ctx.arc(x(pts.length - 1), y(last.price), 3.5, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = "rgba(255,255,255,.55)"; ctx.font = "11px sans-serif";
-  ctx.fillText(`高 ${hi.toFixed(2)}`, 4, 14);
-  ctx.fillText(`低 ${lo.toFixed(2)}`, 4, H - 4);
-  ctx.fillText(`${pts[0].t}`, pad, H - 4);
-  ctx.fillText(`${last.t}${last.live ? " (实时)" : ""}`, W - 90, H - 4);
+  const chg = (last.price - pc) / pc * 100;
+  ctx.font = "bold 12px sans-serif";
+  ctx.fillText(`${last.price.toFixed(2)}  ${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%${last.live ? " (实时)" : ""}`,
+               W - 200, 14);
+  ctx.font = "11px sans-serif"; ctx.fillStyle = "rgba(255,255,255,.55)";
+  ctx.fillText(`${pts[0].t}`, pad, H - 6);
+  ctx.fillText(`${last.t}`, W - 70, H - 6);
 }
 
 function renderPairs(pairs, day) {

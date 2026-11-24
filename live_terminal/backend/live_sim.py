@@ -1589,6 +1589,54 @@ def _emotion_payload_from(gate: dict[str, Any] | None, day: str) -> dict[str, An
     }
 
 
+def _orders_with_live_value(orders: list[dict[str, Any]], day: str
+                            ) -> list[dict[str, Any]]:
+    """给今日委托补「持有价值」：实时价 × 数量 + 浮盈（元）。
+
+    用户 2026-11-24 要求把「消耗比」列换成「持有价值」——
+    一行就能看出这笔排板若成交现在值多少、赚/亏多少。
+    未成交单（queued）按委托价估值、浮盈 0；已成交按 quotes 实时价。
+    """
+    import polars as _pl
+    from pathlib import Path as _P
+
+    px_map: dict[str, float] = {}
+    try:
+        qdir = (_P(__file__).resolve().parents[1] / "data" / "live"
+                / str(day) / "quotes")
+        snaps = sorted(qdir.glob("quotes_*.parquet"))
+        if snaps:
+            df = _pl.read_parquet(snaps[-1])
+            for r in df.iter_rows(named=True):
+                c = str(r.get("ts_code") or "").zfill(6)
+                p = r.get("price")
+                if c and p:
+                    px_map[c] = float(p)
+    except Exception:  # noqa: BLE001
+        pass
+
+    out = []
+    for o in orders:
+        row = dict(o)
+        code = str(o.get("ts_code") or "").zfill(6)
+        qty = int(o.get("qty") or 0)
+        entry = float(o.get("entry_price") or 0.0)
+        filled = o.get("status") == "filled"
+        px = px_map.get(code) if filled else None
+        if px is None or px <= 0:
+            px = entry
+        value = px * qty
+        pnl = (px - entry) * qty if filled else 0.0
+        row["live_price"] = round(px, 3)
+        row["hold_value"] = round(value, 2)
+        row["hold_pnl"] = round(pnl, 2)
+        row["hold_pnl_pct"] = round((px / entry - 1.0) * 100.0, 2) if entry else None
+        row["value_basis"] = ("实时价" if (filled and px_map.get(code)) else
+                              "委托价（未成交）" if not filled else "成本价")
+        out.append(row)
+    return out
+
+
 def _account_snapshot(state: dict[str, Any], positions: list[dict[str, Any]],
                       day: str) -> dict[str, Any]:
     """交易软件式账户面板（用户 2026-11-24 二次裁定）：
@@ -1795,7 +1843,7 @@ def _payload(state: dict[str, Any], day: str, frames: list[dict[str, Any]],
         "pairs": guitu_roles.pair_groups(orders),
         "n_pairs_today": guitu_roles.pair_groups(today)["n_pairs"],
         "frames": len(frames),
-        "today_orders": today,
+        "today_orders": _orders_with_live_value(today, day),
         "n_today": len(today),
         "n_filled_today": sum(1 for o in today if o.get("status") == "filled"),
         "n_unfilled_today": sum(1 for o in today if o.get("status") == "queued_unfilled"),

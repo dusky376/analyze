@@ -55,6 +55,46 @@ def _live_bar_for(code: str) -> dict[str, Any] | None:
         return None
 
 
+def _quotes_bar_for(code: str, day: str) -> dict[str, Any] | None:
+    """用当日 quotes 最新帧合成当日 bar（盘中/收盘后都能用）。
+
+    2026-11-24 实测：panel_live 只到 11-23，今天的真实日线 bar 从未写进
+    面板 → K 线停在昨天（如横店影视显示 16.60，实际今日 18.26 涨停）。
+    quotes 最新帧含 price/open/high/low/prev_close/volume/amount，
+    足以合成一根真实当日 bar。这里**只读内存合成，不写任何 parquet**
+    （历史上把半日 bar 写进面板曾造成假收益污染）。
+    """
+    d = _compact(day)
+    qdir = ROOT / "data" / "live" / d / "quotes"
+    snaps = sorted(qdir.glob("quotes_*.parquet"))
+    if not snaps:
+        return None
+    try:
+        df = pl.read_parquet(snaps[-1])
+        r = df.filter(pl.col("ts_code") == str(code).zfill(6))
+        if r.height == 0:
+            return None
+        row = r.to_dicts()[0]
+        px = row.get("price")
+        if px is None or px <= 0:
+            return None
+        # 盘中合成 bar：以快照的 open/high/low/price 作为当日 OHLC
+        return {
+            "date": f"{d[:4]}-{d[4:6]}-{d[6:]}",
+            "open": float(row["open"]) if row.get("open") else float(px),
+            "high": float(row["high"]) if row.get("high") else float(px),
+            "low": float(row["low"]) if row.get("low") else float(px),
+            "close": float(px),
+            "volume": float(row["volume"]) if row.get("volume") else None,
+            "pct": float(row["pct"]) if row.get("pct") is not None else None,
+            "prev_close": float(row["prev_close"]) if row.get("prev_close") else None,
+            "live": False,          # 真实快照合成，非盘中 streaming
+            "source": "quotes_archive",
+        }
+    except Exception:  # noqa: BLE001
+        return None
+
+
 def kline(code: str, *, days: int = 40,
           panel: pl.DataFrame | None = None) -> dict[str, Any]:
     """最近 N 个交易日 K 线（OHLCV）——**盘中最后一根是实时合成 bar**。
@@ -89,6 +129,24 @@ def kline(code: str, *, days: int = 40,
         else:
             bars.append(live)
             bars = bars[-days:]
+    else:
+        # 收盘后但 panel_live 尚未写入当日（实测 11-24 面板只到 11-23）：
+        # 用 quotes 最新快照合成当日 bar，避免 K 线停在昨天。
+        # 取最近一个有 quotes 留档的交易日；若晚于面板末日，补一根。
+        try:
+            qdirs = sorted((p.name for p in LIVE.iterdir()
+                            if p.is_dir() and p.name.isdigit()
+                            and (p / "quotes").is_dir()), reverse=True)
+            if qdirs:
+                qd = qdirs[0]
+                q_dash = f"{qd[:4]}-{qd[4:6]}-{qd[6:]}"
+                if (not bars) or bars[-1]["date"] < q_dash:
+                    qb = _quotes_bar_for(c, qd)
+                    if qb is not None:
+                        bars.append(qb)
+                        bars = bars[-days:]
+        except Exception:  # noqa: BLE001
+            pass
 
     if not bars:
         return {"available": False, "code": c, "reason": "面板无该股日线", "bars": []}
@@ -141,17 +199,25 @@ def intraday(code: str, day: str | None = None) -> dict[str, Any]:
                 hhmmss = f"{stem[8:10]}:{stem[10:12]}:{stem[12:14]}"
             else:
                 continue
-            df = pl.read_parquet(f, columns=["ts_code", "price"])
+            df = pl.read_parquet(f, columns=["ts_code", "price", "prev_close"])
             r = df.filter(pl.col("ts_code") == c)
             if r.height:
                 px = r["price"][0]
                 if px is not None:
-                    points.append({"t": hhmmss, "price": float(px)})
+                    pc = r["prev_close"][0] if "prev_close" in r.columns else None
+                    points.append({
+                        "t": hhmmss,
+                        "price": float(px),
+                        "prev_close": float(pc) if pc is not None else None,
+                    })
     except Exception as exc:  # noqa: BLE001
         return {"available": False, "code": c, "day": d,
                 "reason": f"读取失败: {type(exc).__name__}: {exc}", "points": []}
 
     points.sort(key=lambda x: x["t"])
+    # 昨收：分时图的基准线（交易软件的中间虚线）
+    prev_close = next((p["prev_close"] for p in points
+                       if p.get("prev_close") and p["prev_close"] > 0), None)
     note = (f"当日 {len(points)} 个离散快照点（约 5 分钟一点，"
             "盘中 recorder 留档）；非逐笔，连线只示趋势。")
 
@@ -181,6 +247,7 @@ def intraday(code: str, day: str | None = None) -> dict[str, Any]:
         "day": f"{d[:4]}-{d[4:6]}-{d[6:]}",
         "points": points,
         "n": len(points),
+        "prev_close": prev_close,
         "live": any(p.get("live") for p in points),
         "note": note,
     }
