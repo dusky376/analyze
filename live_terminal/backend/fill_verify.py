@@ -94,7 +94,13 @@ _AMT_CACHE: dict[tuple[str, str], float | None] = {}
 
 
 def daily_amount(day: str, code: str) -> float | None:
-    """当日成交额（元）。带缓存，避免逐票重复读 373 万行面板。"""
+    """当日成交额（元）。带缓存，避免逐票重复读 373 万行面板。
+
+    2026-11-24 盘中修复：panel_live 要 15:05 后才有当日 bar，盘中查询
+    一律返回 None → `simulate_fill` 的「封单/成交额/换手缺一」让**全天
+    消耗比都算不出来**。现在面板缺当日行时，回退读当日 quotes 留档
+    最新帧的 `amount`（东财实时累计成交额，recorder 每 5 分钟落一帧）。
+    """
     key = (str(day), str(code))
     if key in _AMT_CACHE:
         return _AMT_CACHE[key]
@@ -113,7 +119,28 @@ def daily_amount(day: str, code: str) -> float | None:
             val = float(v) if v is not None else None
     except Exception:  # noqa: BLE001
         val = None
-    _AMT_CACHE[key] = val
+
+    # 盘中回退：日线面板还没有当日 bar → 用 quotes 留档最新帧的累计成交额
+    if val is None:
+        try:
+            from pathlib import Path as _P
+            qdir = (_P(__file__).resolve().parents[1] / "data" / "live"
+                    / str(day) / "quotes")
+            snaps = sorted(qdir.glob("quotes_*.parquet"))
+            if snaps:
+                df = pl.read_parquet(snaps[-1])
+                r = df.filter(pl.col("ts_code") == str(code).zfill(6))
+                if r.height:
+                    a = r["amount"][0]
+                    val = float(a) if a is not None else None
+        except Exception:  # noqa: BLE001 - 留档缺失则保持 None（不猜）
+            val = None
+
+    # 2026-11-24 盘中：quotes 每 5 分钟才落一帧，本进程内首次查询时该票
+    # 可能还没进最新帧 → **None 不缓存**，下次调用重试（拿到新帧就有值）。
+    # 命中真实金额才缓存，避免"查过一次就没有"的假阴性。
+    if val is not None:
+        _AMT_CACHE[key] = val
     return val
 
 

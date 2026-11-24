@@ -1567,6 +1567,65 @@ def _emotion_payload_from(gate: dict[str, Any] | None, day: str) -> dict[str, An
     }
 
 
+def _account_snapshot(state: dict[str, Any], positions: list[dict[str, Any]],
+                      day: str) -> dict[str, Any]:
+    """交易软件式账户面板（用户 2026-11-24 要求：总金额/可用/持仓/当日盈亏）。
+
+    总资金 100 万（用户裁定）；模拟口径：
+      * 总金额   = CAPITAL_YUAN（固定 100 万，模拟盘不随盈亏变动本金；
+                  盈亏体现在「今日盈亏/累计盈亏」里）
+      * 持仓金额 = holding 的 notional 合计（按买入成本计，当日市值变化
+                  不计入——盘中拿不到实时价，如实用成本口径并注明）
+      * 可用金额 = 总金额 − 持仓金额（含已下单未成交的部分吗？不：
+                  queued 未成交未占用，成交才扣）
+      * 当日盈亏 = 当日已结算 trades 的盈亏 + 持仓中当日买入的（暂无市值
+                  变化 = 0）→ 即当日平仓实现的盈亏（成本口径）
+    """
+    capital = CAPITAL_YUAN
+    holding = [p for p in positions if p.get("status") != "closed"]
+    pos_amount = sum(float(p.get("notional") or 0.0) for p in holding)
+    available = max(0.0, capital - pos_amount)
+
+    # 当日盈亏：今日买入且当日已平仓的实现盈亏（T+1 下当天买当天卖不存在，
+    # 所以盘中当日盈亏 = 0 是正确口径；昨日及更早买入的持仓盈亏要等日线）
+    today_pnl = 0.0
+    today_pnl_n = 0
+    for t in state.get("trades") or []:
+        if str(t.get("entry_date")) == str(day):
+            nr = t.get("net_return")
+            if isinstance(nr, (int, float)):
+                # 按 notional 折算金额；缺 notional 用 10 万基准
+                amt = float(t.get("notional") or 0.0) or 100_000.0
+                today_pnl += float(nr) * amt
+                today_pnl_n += 1
+
+    # 累计盈亏：全部已结算 trades
+    total_pnl = 0.0
+    n_closed = 0
+    for t in state.get("trades") or []:
+        nr = t.get("net_return")
+        if isinstance(nr, (int, float)):
+            amt = float(t.get("notional") or 0.0) or 100_000.0
+            total_pnl += float(nr) * amt
+            n_closed += 1
+
+    return {
+        "capital": capital,
+        "total_amount": capital,
+        "available": round(available, 2),
+        "position_amount": round(pos_amount, 2),
+        "position_pct": round(pos_amount / capital * 100.0, 1) if capital else None,
+        "n_holding": len(holding),
+        "today_pnl": round(today_pnl, 2),
+        "today_pnl_n": today_pnl_n,
+        "total_pnl": round(total_pnl, 2),
+        "total_pnl_n": n_closed,
+        "note": ("持仓金额按买入成本计（盘中拿不到实时市值，不猜）；"
+                 "今日盈亏=当日平仓的实现盈亏（T+1：当日买入不会当日平仓）；"
+                 "累计盈亏=全部已结算 net_return × 各自成交额。"),
+    }
+
+
 def _payload(state: dict[str, Any], day: str, frames: list[dict[str, Any]],
              notes: list[str], *,
              ice: dict[str, Any] | None = None,
@@ -1620,7 +1679,18 @@ def _payload(state: dict[str, Any], day: str, frames: list[dict[str, Any]],
     try:
         from backend import fill_verify as _fv
         for _o in today:
-            if _o.get("queue_sim") is None:
+            stale = False
+            qs_old = _o.get("queue_sim")
+            if qs_old is None:
+                stale = True
+            else:
+                # 2026-11-24 盘中修复：账本里固化可能是"当日成交额还没进面板"
+                # 时刻的缺数据结果（detail 以「封单/成交额/换手缺一」开头）。
+                # 盘中 quotes 每 5 分钟落一帧，数据后来有了 → 必须重算，
+                # 否则消耗比整天都是空的。
+                if str((qs_old or {}).get("detail") or "").startswith("封单/成交额/换手缺一"):
+                    stale = True
+            if stale:
                 _o["queue_sim"] = _fv.simulate_fill(
                     day, str(_o.get("ts_code") or ""),
                     str(_o.get("entry_frame_ts") or ""), frames,
@@ -1665,6 +1735,7 @@ def _payload(state: dict[str, Any], day: str, frames: list[dict[str, Any]],
         "n_unknown_today": sum(1 for o in today if o.get("status") == "unknown"),
         "positions": positions,
         "n_holding": sum(1 for p in positions if p.get("status") != "closed"),
+        "account": _account_snapshot(state, positions, day),
         "trades": trades,
         "summary": {
             "n_orders_all": len(orders),

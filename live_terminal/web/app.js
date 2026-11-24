@@ -161,6 +161,7 @@ function renderLiveSim(d) {
   renderTodayOrders(d.today_orders || [], day);
   renderPairs(d.pairs, day);
   renderPositions(d);
+  renderAccount(d);
   renderCost(d);
   renderEmotion(d.ice, d.emotion);
   $("#footerMeta").textContent =
@@ -261,6 +262,34 @@ function renderPositions(d) {
     <td class="num ${cls(p.gross_return)}">${fmtPct(p.gross_return)}</td>
     <td class="num ${cls(p.r_net)}">${fmtPct(p.r_net)}</td>
   </tr>`).join("");
+}
+
+// 交易软件式账户面板（用户 2026-11-24 要求）：总金额/可用/持仓/当日盈亏。
+function renderAccount(d) {
+  const a = d.account;
+  const box = $("#accountSummary");
+  if (!box) return;
+  if (!a || a.total_amount === undefined) {
+    box.innerHTML = `<div class="summary-chip">账户数据不可用</div>`;
+    return;
+  }
+  const money = (v) => fmtInt(v);
+  const pnlChip = (label, v, n) => {
+    const tone = v > 0 ? "up" : v < 0 ? "down" : "flat";
+    return `<div class="summary-chip">${label}` +
+      `<b class="${tone}">${Number(v) > 0 ? "+" : ""}${money(v)}</b>` +
+      (has(n) ? `<small>（${fmtInt(n)} 笔）</small>` : "") +
+      `</div>`;
+  };
+  box.innerHTML = [
+    `<div class="summary-chip">总金额<b>${money(a.total_amount)}</b></div>`,
+    `<div class="summary-chip">可用金额<b>${money(a.available)}</b></div>`,
+    `<div class="summary-chip">持仓金额<b>${money(a.position_amount)}</b>` +
+      `<small>（${fmtInt(a.n_holding)} 只 · ${esc(a.position_pct ?? "—")}%）</small></div>`,
+    pnlChip("当日盈亏", a.today_pnl, a.today_pnl_n),
+    pnlChip("累计盈亏", a.total_pnl, a.total_pnl_n),
+    `<div class="summary-chip muted" style="font-size:11px">${esc(a.note || "")}</div>`,
+  ].join("");
 }
 
 function renderCost(d) {
