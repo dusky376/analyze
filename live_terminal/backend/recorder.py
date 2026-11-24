@@ -40,6 +40,14 @@ AUCTION_EVERY = 15.0
 QUOTE_EVERY = 300.0
 BREADTH_EVERY = 30.0
 POOL_EVERY = 60.0
+#: 题材池（同花顺三池）盘中实时刷新间隔。
+#: 2026-11-24 用户裁定：「这是股票，不是游戏」—— 题材池必须盘中抓，
+#: 否则「题材内一字板 + 换手二板」的选股链路在盘中永远拿不到标签
+#: （实测 11-24 停更在 11-20，当天有 11 只一字二板却 0 委托）。
+THEME_EVERY = 60.0
+THEME_START = dtime(9, 25)      # 竞价定格后再抓，避免把未定格的竞价标签当决策依据
+THEME_END = dtime(15, 5)        # 与日线收盘闸门一致；此后抓到的记为「收盘定格」
+THEME_TICK = 5.0                # 独立线程的检查粒度（不阻塞主 tick）
 TICK = 3.0
 
 QUOTE_COLS = [
@@ -50,6 +58,7 @@ QUOTE_COLS = [
 
 _lock = threading.RLock()
 _thread: threading.Thread | None = None
+_theme_thread: threading.Thread | None = None
 _stop = threading.Event()
 _state: dict[str, Any] = {
     "last_error": None,
@@ -58,6 +67,8 @@ _state: dict[str, Any] = {
     "last_quote": 0.0,
     "last_breadth": 0.0,
     "last_pool": 0.0,
+    "last_theme": 0.0,
+    "last_theme_error": None,
     "day": None,
 }
 _pruned_for: str | None = None
@@ -200,6 +211,62 @@ def _snap_pools(folder: Path) -> None:
     _state["last_pool"] = time.time()
 
 
+def _snap_themes(now: datetime) -> dict[str, Any]:
+    """盘中实时抓同花顺题材池（涨停/炸板/连板三池）并存量更新。
+
+    为什么放这里（2026-11-24）：
+      `data/live/<day>/pools` 只留涨停池的行业字段，**没有题材标签**；
+      二板选股链路 `live_sim._theme_tags()` 读的是 `data/themes/themes.parquet`。
+      该文件此前只靠人工跑，11-21 之后断更 → 11-24 有 11 只一字二板、
+      情绪也不差，却因为「当日无题材池标签」全天 0 委托。
+      现在跟随 recorder 每 60 秒刷新一次，盘中标签与行情同频。
+
+    留痕：manifest 里写 `intraday=True` + `snapshot_at`，区分「盘中快照」
+    与「收盘定格」；收盘后最后一次抓取会把该日数据定格（upsert 幂等覆盖）。
+    """
+    from backend import theme_pool
+
+    day = now.strftime("%Y%m%d")
+    intraday = now.time() < THEME_END
+    res = theme_pool.collect(
+        day, save=True,
+        meta_extra={"intraday": intraday,
+                    "snapshot_at": now.isoformat(timespec="seconds")},
+    )
+    folder = _day_dir(now.date())
+    _prepare(folder)
+    _bump(folder, "theme_points",
+          last_theme_at=now.isoformat(timespec="seconds"),
+          last_theme_rows=int(res.get("n_rows") or 0),
+          last_theme_intraday=bool(intraday))
+    return res
+
+
+def _theme_due(now: datetime) -> bool:
+    """是否该抓题材池（交易日 + 交易时段 + 间隔到）。"""
+    if not _is_trading_day(now):
+        return False
+    t = now.time()
+    if t < THEME_START or t > THEME_END:
+        return False
+    if dtime(11, 32) <= t < dtime(12, 58):
+        return False
+    return time.time() - float(_state.get("last_theme") or 0.0) >= THEME_EVERY
+
+
+def _theme_loop() -> None:
+    """题材池专用线程：网络慢/超时也不拖住 3 秒主采集循环。"""
+    while not _stop.is_set():
+        try:
+            now = datetime.now()
+            if _theme_due(now):
+                _snap_themes(now)
+                _state["last_theme_error"] = None
+        except Exception as exc:  # noqa: BLE001 - 单次失败不影响主循环
+            _state["last_theme_error"] = f"{type(exc).__name__}: {exc}"
+        _stop.wait(THEME_TICK)
+
+
 def _prune() -> None:
     """只保留最近 RETENTION_DAYS 个自然日目录。"""
     global _pruned_for
@@ -290,13 +357,16 @@ def _loop() -> None:
 # ---------------------------------------------------------------------------
 
 def start() -> dict[str, Any]:
-    global _thread
+    global _thread, _theme_thread
     with _lock:
         if _thread is not None and _thread.is_alive():
             return status()
         _stop.clear()
         _thread = threading.Thread(target=_loop, name="live-recorder", daemon=True)
         _thread.start()
+        _theme_thread = threading.Thread(target=_theme_loop, name="theme-recorder",
+                                         daemon=True)
+        _theme_thread.start()
     return status()
 
 
@@ -320,6 +390,10 @@ def status() -> dict[str, Any]:
             "quote_frames": int(meta.get("quote_frames", 0)),
             "breadth_points": int(meta.get("breadth_points", 0)),
             "pool_points": int(meta.get("pool_points", 0)),
+            "theme_points": int(meta.get("theme_points", 0)),
+            "last_theme_at": meta.get("last_theme_at"),
+            "last_theme_rows": meta.get("last_theme_rows"),
+            "last_theme_intraday": meta.get("last_theme_intraday"),
             "first_at": meta.get("first_at"),
             "last_at": meta.get("last_at"),
             "last_quote_time": meta.get("last_quote_time"),
@@ -330,10 +404,12 @@ def status() -> dict[str, Any]:
         "tick_sec": TICK,
         "auction_every_sec": AUCTION_EVERY,
         "quote_every_sec": QUOTE_EVERY,
+        "theme_every_sec": THEME_EVERY,
         "last_tick": _state.get("last_tick"),
         "last_error": _state.get("last_error"),
+        "last_theme_error": _state.get("last_theme_error"),
         "note": (
             "竞价每 15 秒、盘中每 5 分钟保存全市场快照；"
-            "广度 30 秒、情绪池 60 秒。保留 60 天。"
+            "广度 30 秒、情绪池 60 秒、题材池（同花顺三池）60 秒。保留 60 天。"
         ),
     }

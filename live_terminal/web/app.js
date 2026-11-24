@@ -87,19 +87,26 @@ function renderHealth(h) {
   const last = h?.panel?.last_trade_date || "—";
   const live = h?.live_archive?.latest || "—";
   const ac = h?.archive_check || {};
+  const tc = ac.themes || {};
   // 留档自检：missing / stale 时降级为预警，避免把"数据没到"误读为"策略没信号"。
   const archiveBad = ac.status === "missing" || ac.status === "stale";
+  const themeBad = tc.status === "missing" || tc.status === "stale";
   setText("#healthPill",
-    !ok ? "数据异常" : archiveBad ? "留档缺失" : "数据正常",
-    !ok ? "bad" : archiveBad ? "warn" : "ok");
-  $("#healthPill").title = ac.message || (
+    !ok ? "数据异常" : archiveBad ? "留档缺失" : themeBad ? "题材池断更" : "数据正常",
+    !ok ? "bad" : (archiveBad || themeBad) ? "warn" : "ok");
+  $("#healthPill").title = [
+    ac.message || "",
+    tc.message ? `题材池：${tc.message}` : "",
     `panel_last=${last} · live_latest=${live} · recorder=${
-      h?.recorder?.running ? "running" : "stopped"}`);
+      h?.recorder?.running ? "running" : "stopped"}`,
+  ].filter(Boolean).join("\n");
   const market = h?.market?.reason || "";
   setText("#marketPill", market ? `A股 ${market}` : "A股 —");
   $("#dayPill").textContent = fmtDay(h?.day);
-  // 顶部 notice 只在留档异常时提示；不开仓的原因由 renderLiveSim 负责。
+  // 顶部 notice：留档缺失优先；两者都正常时清空。
   if (archiveBad) notice(`留档自检：${ac.message}`);
+  else if (themeBad) notice(`题材池：${tc.message}`);
+  else notice("");
 }
 
 /* --------------------------------------------------------------- live sim */
@@ -119,8 +126,13 @@ function renderLiveSim(d) {
   const reason = $("#heroReason");
   if (d.no_orders) {
     title.textContent = "今日不开仓";
-    reason.textContent = d.no_orders_reason || "当日无二板委托。";
-    notice(d.no_orders_reason || "");
+    // 具体原因（如「当日无题材池标签」）优先；没有才退回通用说明，
+    // 避免把「数据没到」笼统显示成「策略没开仓」。
+    const why = (Array.isArray(d.notes) && d.notes.length)
+      ? d.notes.join(" ") : "";
+    reason.textContent = why || d.no_orders_reason || "当日无二板委托。";
+    if (why) reason.title = d.no_orders_reason || "";
+    notice(why || d.no_orders_reason || "");
   } else if (nToday > 0) {
     title.textContent = `今日 ${nToday} 张二板排板单`;
     reason.textContent = `已成交 ${nFilled} 张，排队未成 ${d.n_unfilled_today ?? 0} 张，` +
@@ -188,7 +200,8 @@ function renderTodayOrders(rows, day) {
     const reason = o.fill_reason || o.state_note || (o.queue_sim && o.queue_sim.detail) || "—";
     return `<tr>
       <td><div class="name">${esc(o.name || "—")}</div><div class="code">${esc(o.ts_code || "")}</div></td>
-      <td>${esc(o.industry || g.industry || "—")}</td>
+      <td>${esc(o.guitu_theme || o.industry || g.industry || "—")}${
+        o.guitu_theme && o.industry ? `<div class="code">${esc(o.industry)}</div>` : ""}</td>
       <td>${roleTag(g.role, g.role_cn)}</td>
       <td>${esc(fmtTs(o.entry_frame_ts))}</td>
       <td class="num">${fmtNum(o.entry_price)}</td>
@@ -406,11 +419,15 @@ function renderEmotion(ice, emo) {
       const dims = ice.dim_levels || {};
       const dimText = Object.entries(dims)
         .map(([k, v]) => `${esc(ICE_DIM_CN[k] || k)}=${esc(v || "—")}`).join(" · ");
+      const iceTag = ice.intraday
+        ? `<span class="tag unknown">盘中 ${esc((ice.as_of || "").slice(11, 16) || "实时")}</span>`
+        : "";
       iceBox.innerHTML = `<h4>市场冰点 · 仓位档</h4>
         <div class="status">
           <b class="${tone}">${esc(ice.verdict || "—")}</b>
           <span class="tag ${ice.is_ice ? "rabbit" : "turtle"}">${esc(lv)}</span>
           ${factor !== null ? `<span class="tag unknown">仓位 ×${factor.toFixed(2)}</span>` : ""}
+          ${iceTag}
         </div>
         <p class="muted">跌停 ${esc(fmtInt(m.limit_down_n))} · 涨停 ${esc(fmtInt(m.limit_up_n))}
           · 下跌占比 ${esc(has(m.down_share) ? (Number(m.down_share) * 100).toFixed(1) + "%" : "—")}
@@ -429,9 +446,13 @@ function renderEmotion(ice, emo) {
         <div class="empty-card">${esc((emo && emo.reason) || "情绪数据不可用")}</div>`;
     } else {
       const blocked = emo.blocked === true;
+      const emoTag = emo.intraday
+        ? `<span class="tag unknown">盘中 ${esc((emo.as_of || "").slice(11, 16) || "实时")}</span>`
+        : "";
       emoBox.innerHTML = `<h4>个股情绪 · 打板闸门</h4>
         <div class="status">
           <b class="${blocked ? "down" : "up"}">${esc(emo.verdict || "—")}</b>
+          ${emoTag}
         </div>
         <p class="muted">昨日高标 ${esc(fmtInt(emo.n_high))} 只 · 今日均涨 ${fmtPct(
           has(emo.avg_ret) ? Number(emo.avg_ret) / 100 : null)}

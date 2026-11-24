@@ -164,11 +164,30 @@ def real_items():
     return items
 
 
-def test_real_coverage_improved(real_items):
+#: 覆盖率标定用「已定格的历史日」，不用「最新一天」。
+#: 2026-11-24 起题材池改为盘中实时采集，最新一天可能是只含部分涨停的盘中快照
+#: （09:53 实测 53 行，收盘 100+ 行），拿它标定轴覆盖率会把「样本不全」
+#: 误判成「扩轴失效」。标定只关心轴映射，固定一个完整交易日即可。
+CALIB_DAY = "2026-11-18"
+
+
+@pytest.fixture(scope="module")
+def calib_items():
+    try:
+        items, _ = TM._items_from_parquet(CALIB_DAY)
+    except Exception:  # noqa: BLE001
+        pytest.skip("本地无 themes.parquet")
+    if not items:
+        pytest.skip(f"parquet 无 {CALIB_DAY}")
+    return items
+
+
+def test_real_coverage_improved(calib_items):
     """扩轴后股票层覆盖率必须显著高于旧轴的 53.2%。"""
-    s = TM.coverage_stats(real_items)
+    s = TM.coverage_stats(calib_items)
     assert s["axis_pct"] >= 65.0, f"扩轴后股票层覆盖率仅 {s['axis_pct']}%，低于预期"
-    print(f"\n[real] n={s['n']} tagged={s['tagged_pct']}% axis={s['axis_pct']}%")
+    print(f"\n[real] day={CALIB_DAY} n={s['n']} "
+          f"tagged={s['tagged_pct']}% axis={s['axis_pct']}%")
 
 
 def test_real_grouping_finds_compute_pair(real_items):

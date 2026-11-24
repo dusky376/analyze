@@ -352,12 +352,16 @@ def _fetch_page(pool: str, day8: str, page: int,
 
 
 def collect(day: str | date, *, pools: Iterable[str] = tuple(POOLS),
-            save: bool = True, session=None) -> dict[str, Any]:
+            save: bool = True, session=None,
+            meta_extra: dict[str, Any] | None = None) -> dict[str, Any]:
     """抓某一天的全部池并落盘。
 
     Parameters
     ----------
     day : "2026-11-16" / "20261116" / date
+    meta_extra : 写进 `_manifest.json` 当日条目的附加字段。盘中实时采集传
+        `{"intraday": True, "snapshot_at": ...}`，让「盘中快照」与
+        「收盘定格」在留痕里可区分（同一天后续 upsert 会覆盖为最后一次）。
 
     Returns
     -------
@@ -398,7 +402,7 @@ def collect(day: str | date, *, pools: Iterable[str] = tuple(POOLS),
     }
     if save:
         # 存量更新：官方数据没变就不写盘（返回 unchanged=True）
-        out.update(upsert(df, d, save=True))
+        out.update(upsert(df, d, save=True, meta_extra=meta_extra))
     return out
 
 
@@ -545,7 +549,7 @@ def _read_all() -> pl.DataFrame:
 
 
 def upsert(df_new: pl.DataFrame, day: str, *, source: str = "ths_pool",
-           save: bool = True) -> dict[str, Any]:
+           save: bool = True, meta_extra: dict[str, Any] | None = None) -> dict[str, Any]:
     """把某一天的抓取结果**存量更新**进单文件（幂等）。
 
     Returns
@@ -567,6 +571,13 @@ def upsert(df_new: pl.DataFrame, day: str, *, source: str = "ths_pool",
     m = _read_manifest()
     prev = m.get(d) or {}
     if prev.get("fp") == fp_new and prev.get("rows") == df_new.height:
+        # 数据没变不重写 parquet，但抓取时刻仍要更新：
+        # 盘中每 60 秒的实时采集若内容不变，界面需要知道「刚抓过」。
+        m.setdefault(d, {}).update(
+            {"fetched_at": datetime.now().isoformat(timespec="seconds")})
+        if meta_extra:
+            m[d].update(meta_extra)
+        _write_manifest(m)
         return {"added": 0, "updated": 0, "removed": 0,
                 "unchanged": True, "fp": fp_new, "path": str(themes_file())}
 
@@ -598,6 +609,8 @@ def upsert(df_new: pl.DataFrame, day: str, *, source: str = "ths_pool",
     m[d] = {"fp": fp_new, "rows": df_new.height,
             "fetched_at": datetime.now().isoformat(timespec="seconds"),
             "source": source}
+    if meta_extra:
+        m[d].update(meta_extra)
     _write_manifest(m)
     _append_revision({
         "at": datetime.now().isoformat(timespec="seconds"),

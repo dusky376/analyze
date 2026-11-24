@@ -174,21 +174,20 @@ def compute_bounds(rows: list[dict[str, Any]]) -> dict[str, dict[str, float]]:
 # 真实日线 → 逐日四维指标
 # ---------------------------------------------------------------------------
 
-def _metrics_frame(panel: pl.DataFrame) -> pl.DataFrame:
-    """一次性向量化算全历史逐日四维指标（避免 O(天×股) 重复扫描）。
-
-    Returns: DataFrame[trade_date(str), down_share, limit_down_n, limit_up_n,
-             dt_ratio, broken_hi_n, up, down]，按日期升序。
-    """
+def _flag_frame(panel: pl.DataFrame) -> pl.DataFrame:
+    """逐行涨跌/涨跌停/连板标记（日线口径，供收盘与盘中两条路径共用）。"""
     # 涨跌幅 + 涨跌停价幅度（按代码板块）
     df = (panel.select(["ts_code", "trade_date", "close"])
           .sort(["ts_code", "trade_date"])
           .with_columns(pl.col("close").shift(1).over("ts_code").alias("prev_close")))
 
-    lim = pl.col("ts_code").map_elements(
-        lambda c: float(feature_engine.limit_pct(str(c))) * 100.0,
-        return_dtype=pl.Float64).alias("lim_pct")
-    df = df.with_columns(lim).with_columns(
+    codes = df["ts_code"].unique().to_list()
+    lim_map = {str(c): float(feature_engine.limit_pct(str(c))) * 100.0
+               for c in codes}
+    df = df.with_columns(
+        pl.col("ts_code").cast(pl.Utf8)
+        .replace_strict(lim_map, return_dtype=pl.Float64).alias("lim_pct")
+    ).with_columns(
         ((pl.col("close") / pl.col("prev_close") - 1.0) * 100.0).alias("pct"))
 
     # 涨停 / 跌停标记（留 0.3 个百分点容差，与 feature_engine 口径一致）
@@ -211,8 +210,17 @@ def _metrics_frame(panel: pl.DataFrame) -> pl.DataFrame:
         .otherwise(0).cast(pl.Int32).alias("streak"))
     df = df.with_columns(pl.col("streak").shift(1).over("ts_code")
                          .fill_null(0).alias("prev_streak"))
-    df = df.with_columns(
+    return df.with_columns(
         ((pl.col("prev_streak") >= 3) & (~pl.col("is_zt"))).alias("hi_broken"))
+
+
+def _metrics_frame(panel: pl.DataFrame) -> pl.DataFrame:
+    """一次性向量化算全历史逐日四维指标（避免 O(天×股) 重复扫描）。
+
+    Returns: DataFrame[trade_date(str), down_share, limit_down_n, limit_up_n,
+             dt_ratio, broken_hi_n, up, down]，按日期升序。
+    """
+    df = _flag_frame(panel)
 
     # 按日聚合
     agg = (df.filter(pl.col("pct").is_not_null())
@@ -304,10 +312,138 @@ def history(panel: pl.DataFrame, *, days: int = 250) -> list[dict[str, Any]]:
     return [{**r, "day": r["day"]} for r in m.to_dicts()]
 
 
+# ---------------------------------------------------------------------------
+# 盘中读数（2026-11-24 用户裁定：「这是股票，不是游戏」）
+# ---------------------------------------------------------------------------
+# 收盘口径只在 15:05 后成立；盘中面板里没有当日行，页面只能显示「面板无」，
+# 用户看到的是「没数据」，实际是「还没收盘」。这里用实时行情算同一套四维指标，
+# 让盘中也有读数，并显式标注 intraday=True / as_of（不与收盘定格混淆）。
+
+#: 盘中读数只回看最近 N 个交易日算连板状态（连板不会超过这个长度）。
+LIVE_LOOKBACK = 60
+
+
+def _slice_recent(panel: pl.DataFrame, n: int = LIVE_LOOKBACK) -> pl.DataFrame:
+    dates = panel["trade_date"].unique().sort().to_list()
+    if not dates:
+        return panel
+    cut = dates[-n] if len(dates) > n else dates[0]
+    return panel.filter(pl.col("trade_date") >= cut)
+
+
+def prev_day_state(panel: pl.DataFrame | None = None, *,
+                   lookback: int = LIVE_LOOKBACK) -> pl.DataFrame:
+    """上一交易日每只股票的 (prev_streak, prev_is_zt)。
+
+    只回看最近 `lookback` 个交易日算连板 —— 连板状态只在近端有意义，
+    全表扫描 370 万行会让盘中每 60 秒的重算变成秒级卡顿。
+
+    口径：以面板最后一个交易日为「昨天」，取该日的 `streak`（截至当日连续涨停数）
+    与 `is_zt`（当日是否涨停）。**不能用 `_flag_frame` 里的 `prev_streak`** ——
+    那一列是相对当日的前一日连板数，直接取会整体错位一天（盘中会把前天的连板
+    当成昨天的，高标破板数因此少算）。
+    """
+    p = panel if panel is not None else feeds.build_panel()
+    if p is None or p.height == 0:
+        return pl.DataFrame(schema={"ts_code": pl.Utf8, "prev_streak": pl.Int32,
+                                    "prev_is_zt": pl.Boolean})
+    fl = _flag_frame(_slice_recent(p, lookback))
+    last = fl["trade_date"].max()
+    snap = fl.filter(pl.col("trade_date") == last)
+    out = snap.select([
+        pl.col("ts_code").cast(pl.Utf8),
+        pl.col("streak").fill_null(0).cast(pl.Int32).alias("prev_streak"),
+        pl.col("is_zt").alias("prev_is_zt"),
+    ])
+    return out.unique(subset=["ts_code"], keep="last")
+
+
+def _quote_stamp(q: pl.DataFrame) -> str:
+    """行情自带数据时点：20261124093625 -> 2026-11-24T09:36:25。"""
+    try:
+        raw = str(q["quote_time"].max() or "")
+    except Exception:  # noqa: BLE001
+        raw = ""
+    if len(raw) < 14 or not raw.isdigit():
+        return ""
+    return (f"{raw[:4]}-{raw[4:6]}-{raw[6:8]}T"
+            f"{raw[8:10]}:{raw[10:12]}:{raw[12:14]}")
+
+
+def live_metrics(day: str, *, panel: pl.DataFrame | None = None,
+                 quotes: pl.DataFrame | None = None) -> dict[str, Any] | None:
+    """用实时行情算「今天」的四维指标（收盘口径的盘中代理）。
+
+    口径与历史一致：涨停/跌停按代码板块涨跌幅上限 ±0.3pp 容差，
+    高标破板 = 昨日连板≥3 且当前未涨停。仅数据源由收盘价换成最新价。
+    """
+    d = _norm(day)
+    day8 = d.replace("-", "")
+    p = panel if panel is not None else feeds.build_panel()
+    if p is None or p.height == 0:
+        return None
+    # 只有一个交易日 → 没有「昨天」，连板与高标破板都无从谈起。
+    # 返回残缺读数比不返回更危险（会被界面显示成「非冰点」）。
+    if p["trade_date"].n_unique() < 2:
+        return None
+    q = quotes if quotes is not None else feeds.all_quotes()
+    if q is None or q.height == 0:
+        return None
+    stamp = _quote_stamp(q)
+    # 行情不是当天的（周末/节假日/数据源滞后）→ 不拿旧价冒充今天
+    if not stamp.startswith(d) and not str(q["quote_time"].max() or "").startswith(day8):
+        return None
+
+    prev = prev_day_state(p)
+    if prev.height == 0:
+        return None
+    if "pct" not in q.columns:
+        return None
+    qq = (q.select([pl.col("ts_code").cast(pl.Utf8), pl.col("pct")])
+          .filter(pl.col("pct").is_not_null()))
+    if qq.height == 0:
+        return None
+    codes = qq["ts_code"].unique().to_list()
+    lim_map = {str(c): float(feature_engine.limit_pct(str(c))) * 100.0
+               for c in codes}
+    qq = qq.with_columns(
+        pl.col("ts_code").replace_strict(lim_map, return_dtype=pl.Float64)
+        .alias("lim_pct")
+    ).with_columns([
+        (pl.col("pct") >= pl.col("lim_pct") - 0.3).alias("is_zt"),
+        (pl.col("pct") <= -(pl.col("lim_pct") - 0.3)).alias("is_dt"),
+        (pl.col("pct") > 0).alias("is_up"),
+        (pl.col("pct") < 0).alias("is_down"),
+    ])
+    j = qq.join(prev, on="ts_code", how="left")
+    up = int(j["is_up"].sum())
+    down = int(j["is_down"].sum())
+    limit_up_n = int(j["is_zt"].sum())
+    limit_down_n = int(j["is_dt"].sum())
+    broken_hi_n = int((j["prev_streak"].fill_null(0).ge(3) & ~j["is_zt"]).sum())
+    total = up + down
+    return {
+        "day": d,
+        "down_share": round(down / total, 4) if total else None,
+        "limit_down_n": limit_down_n,
+        "limit_up_n": limit_up_n,
+        "dt_ratio": (round(limit_down_n / limit_up_n, 4)
+                     if limit_up_n else None),
+        "broken_hi_n": broken_hi_n,
+        "up": up,
+        "down": down,
+        "intraday": True,
+        "as_of": stamp,
+        "basis": "实时行情（盘中未收盘）",
+    }
+
+
 def assess(day: str, *, panel: pl.DataFrame | None = None,
            bounds: dict[str, Any] | None = None,
            roll_bounds: bool = True,
-           persist: bool = False) -> dict[str, Any]:
+           persist: bool = False,
+           intraday: bool = False,
+           quotes: pl.DataFrame | None = None) -> dict[str, Any]:
     """评估某日冰点状态 + 仓位系数。
 
     Args:
@@ -318,15 +454,24 @@ def assess(day: str, *, panel: pl.DataFrame | None = None,
                      False = 用 DEFAULT_BOUNDS 快照（便于复现历史）
         persist: True 时把本次判定写入样本库（用户裁定 B：命中即新增样本）。
                  默认 False —— 纯查询不产生副作用，避免只读调用污染样本库。
+        intraday: True 时，若当日收盘 bar 还没进面板（盘中），改用实时行情
+                  算同一套四维指标，返回 `intraday=True` + `as_of`。
+                  盘中读数**不写样本库** —— 未收盘的数据不能当历史样本。
+        quotes: 可注入实时行情快照（便于测试）；None 时读 feeds.all_quotes()
     """
     d = _norm(day)
     p = panel if panel is not None else feeds.build_panel()
     rec = day_metrics(p, d)
+    intraday_used = False
+    if rec is None and intraday:
+        rec = live_metrics(d, panel=p, quotes=quotes)
+        intraday_used = bool(rec)
     if rec is None:
         return {
             "available": False,
             "day": d,
-            "reason": f"面板无 {d} 或无前一交易日",
+            "reason": (f"面板无 {d} 或无前一交易日" if not intraday
+                       else f"面板无 {d}，且实时行情不可用（非当日快照）"),
             "is_ice": False,
             "level": None,
             "size_factor": SIZE_FACTOR_DEFAULT,
@@ -366,7 +511,7 @@ def assess(day: str, *, panel: pl.DataFrame | None = None,
 
     # 用户裁定 B：命中即新增样本并参与校准（persist=True 时才写）
     sample_info: dict[str, Any] = {"persisted": False}
-    if persist:
+    if persist and not intraday_used:
         try:
             from backend import ice_samples
             # 原子临界区：load→record→save 全程持锁，避免并发覆盖/Windows replace 冲突
@@ -390,6 +535,8 @@ def assess(day: str, *, panel: pl.DataFrame | None = None,
         "available": True,
         "day": d,
         "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "intraday": intraday_used,
+        "as_of": rec.get("as_of"),
         "metrics": rec,
         "dim_levels": dims,
         "level": s,
@@ -401,8 +548,11 @@ def assess(day: str, *, panel: pl.DataFrame | None = None,
         "bounds_source": ("rolling_250d" if roll_bounds else "snapshot"),
         "bounds": bounds,
         "sample": sample_info,
-        "caveat": ("分位边界随市场滚动现算；备份切分验证显示冰点形态会漂移"
-                   "（OOS 种子命中 0/17），不得把历史阈值当永久真理。"),
+        "caveat": (("盘中读数（" + str(rec.get("as_of") or "实时行情")
+                    + "），非收盘定格；收盘后以日线口径复核，且不计入冰点样本库。")
+                   if intraday_used else
+                   ("分位边界随市场滚动现算；备份切分验证显示冰点形态会漂移"
+                    "（OOS 种子命中 0/17），不得把历史阈值当永久真理。")),
     }
 
 

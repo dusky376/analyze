@@ -439,6 +439,10 @@ def build_order(day: str, code: str, g: dict[str, Any], *,
         "day": day, "strategy": STRATEGY,
         "ts_code": code, "name": g["name"],
         "industry": g["industry"], "turnover": g["turnover"],
+        # 交易题材（来自题材池的板块级归并），与申万行业分开存：
+        # 行业是分类归属，题材才是「同题材有一字兔 → 买其他二板」的分组依据。
+        "guitu_theme": g.get("guitu_theme"),
+        "guitu_rabbits": g.get("guitu_rabbits"),
         "entry_date": day, "entry_price": first.get("price"),
         # 数量与成交额：让 settle 的成本口径能计入最低 5 元佣金
         "qty": qty, "notional": notional,
@@ -1082,24 +1086,60 @@ def collect_guitu_targets(
             "（不退回「全部二板」的旧口径）。")
         return {}, notes
 
-    # 题材 -> 该题材下的涨停股
+    # ------------------------------------------------------------------
+    # 2026-11-24 接入 theme_match 多标签匹配层（用户裁定：同题材同板块
+    # = 同一个概念；一只票可属多个板块，旧单标签口径会丢关联）。
+    # 组结构升级：
+    #   axis 级（题材轴板块）—— 与旧口径同权，直接采用；
+    #   tag  级（轴未收录但原始标签相同）—— 同样采用（轴长尾兜底，
+    #          当天新标签不用等补轴就能配对）；
+    #   industry 级 —— theme_match 已按裁定禁止给无标签票开后门，
+    #          此处不采用（不硬凑）。
+    # ------------------------------------------------------------------
+    from backend import theme_match as TM
+
+    items = [{"code": c, "name": g.get("name") or "",
+              "tags": tags.get(c) or [],
+              "industry": None,          # 数据真实边界：涨停池无行业
+              "streak": int(g.get("streak") or 0)}
+             for c, g in allzt.items()]
+    grouped = TM.group_by_theme(items)
+    # 覆盖率监控（用户关心"会不会漏"）：漏了谁如实进 notes
+    cov = TM.coverage_stats(items)
+    if cov["unlabeled"] or cov["unmapped"]:
+        miss = cov["unlabeled"][:5] + cov["unmapped"][:5]
+        notes.append(
+            f"题材覆盖监控：涨停 {cov['n']} 只，映射到板块 {cov['n_axis']}"
+            f"（{cov['axis_pct']}%）；未映射 {len(cov['unmapped'])}、"
+            f"无标签 {len(cov['unlabeled'])}，其中二板/主力:"
+            + ("、".join(f"{m['code']}{m.get('name')}" for m in miss[:6])
+               or "无"))
+
+    # 题材 -> 该题材下的涨停股（新层：多标签展开 + tag 级兜底）
     from collections import defaultdict
     by_theme: dict[str, list[str]] = defaultdict(list)
-    for code in allzt:
-        for t in tags.get(code) or []:
-            by_theme[t].append(code)
+    for g in grouped.get("groups") or []:
+        if g.get("level") == "axis" or g.get("level") == "tag":
+            by_theme[g["theme"]].extend(g.get("codes") or [])
 
     two_map, _ = collect_two_board(frames)   # 二板素材（含全帧 broken_max 等）
 
     picked: dict[str, dict[str, Any]] = {}
     hit_themes: list[str] = []
     for theme, codes in sorted(by_theme.items()):
+        # 多标签展开会重复：一只票同时出现在「机器人」「消费」两组 → 去重保序
+        seen: set[str] = set()
+        uniq: list[str] = []
+        for c in codes:
+            if c not in seen and c in allzt:
+                seen.add(c)
+                uniq.append(c)
         # 用户确认：兔子必须是「一字板 + 二板」，一字首板不算
-        ones = [c for c in codes if is_rabbit(allzt[c])]
+        ones = [c for c in uniq if is_rabbit(allzt[c])]
         if not ones:
             continue
         # 该题材内的其他二板（排除一字板本身；且只做二板）
-        others = [c for c in codes
+        others = [c for c in uniq
                   if c not in ones and int(allzt[c].get("streak") or 0) == 2]
         # 尾盘已不在涨停池的（早盘封一下就炸的）不买 —— 那不是"在做"
         others = [c for c in others if allzt[c].get("in_last_frame")]
@@ -1151,10 +1191,68 @@ _GATE_CACHE: dict[str, dict[str, Any]] = {}
 _GATE_CACHE_MAX = 8
 
 
-def emotion_gate(day: str) -> dict[str, Any]:
+def _emotion_close_lists(p: pl.DataFrame, prev: str, today: str
+                         ) -> tuple[list[float], list[float]]:
+    """收盘口径：昨日高标/昨日涨停 → 今日收盘涨幅（真实日线）。"""
+    from backend import feature_engine
+    hi_ret: list[float] = []
+    prem_vals: list[float] = []
+    for (code,), g in p.group_by("ts_code", maintain_order=True):
+        ds = [str(x) for x in g["trade_date"].to_list()]
+        if prev not in ds or today not in ds:
+            continue
+        jp, jt = ds.index(prev), ds.index(today)
+        if jt < 1:
+            continue
+        c = g["close"].to_numpy().astype(float)
+        _, st = feature_engine.zt_flags(code, c)
+        if int(st[jp]) >= 1:                 # 昨日涨停 → 进溢价样本
+            r = float(c[jt] / c[jt - 1] - 1.0) * 100.0
+            if r == r:
+                prem_vals.append(r)
+        if int(st[jp]) < 2:                  # 昨日高标（≥2 板）
+            continue
+        r = float(c[jt] / c[jt - 1] - 1.0) * 100.0
+        if r == r:
+            hi_ret.append(r)
+    return hi_ret, prem_vals
+
+
+def _emotion_intraday_lists(day: str, p: pl.DataFrame, quotes: pl.DataFrame | None = None
+                            ) -> tuple[list[float], list[float], str] | None:
+    """盘中口径：昨日高标/昨日涨停 → 最新价涨幅。
+
+    2026-11-24 用户裁定「这是股票，不是游戏」：闸门不能等收盘才算。
+    今日 bar 还没进面板时，用实时行情的 `pct`（= 现价/昨收-1）代替收盘涨幅，
+    昨日高标与昨日涨停状态仍严格取自日线面板。返回 (hi_ret, prem_vals, as_of)。
+    """
+    from backend import feeds, ice_gate
+    q = quotes if quotes is not None else feeds.all_quotes()
+    if q is None or q.height == 0:
+        return None
+    stamp = ice_gate._quote_stamp(q)
+    if not stamp.startswith(_day_dash(day)):
+        return None                          # 行情不是当天的，不冒充
+    prev = ice_gate.prev_day_state(p)
+    if prev.height == 0:
+        return None
+    qq = (q.select([pl.col("ts_code").cast(pl.Utf8), pl.col("pct")])
+          .filter(pl.col("pct").is_not_null()))
+    j = prev.join(qq, on="ts_code", how="inner")
+    if j.height == 0:
+        return None
+    hi_ret = [float(x) for x in
+              j.filter(pl.col("prev_streak") >= 2)["pct"].to_list() if x == x]
+    prem_vals = [float(x) for x in
+                 j.filter(pl.col("prev_is_zt"))["pct"].to_list() if x == x]
+    return hi_ret, prem_vals, stamp
+
+
+def emotion_gate(day: str, *, intraday: bool = False) -> dict[str, Any]:
     """悟空真经第一步：情绪闸门（人气股赚钱效应）。
 
     结果按 day 缓存（见 `_GATE_CACHE`）：全市场扫描约 4s，多处调用只算一次。
+    盘中读数（intraday=True，当日收盘 bar 未进面板时）**不缓存** —— 行情在变。
 
     用户原话：「明显的亏钱效应，最直接的指标，人气股是不是在大跌，是不是按在跌停」。
 
@@ -1184,30 +1282,25 @@ def emotion_gate(day: str) -> dict[str, Any]:
             return out
         days = sorted({str(d) for d in p["trade_date"].unique().to_list()})
         dd = _day_dash(day)
-        if dd not in days:
+        as_of = ""
+        intraday_used = False
+        if dd in days:
+            i = days.index(dd)
+            if i < 1:
+                out["reason"] = "无前一交易日"
+                return out
+            prev, today = days[i - 1], dd
+            hi_ret, prem_vals = _emotion_close_lists(p, prev, today)
+        elif intraday:
+            got = _emotion_intraday_lists(day, p)
+            if got is None:
+                out["reason"] = f"面板无 {dd}，且实时行情不可用（非当日快照）"
+                return out
+            hi_ret, prem_vals, as_of = got
+            intraday_used = True
+        else:
             out["reason"] = f"面板无 {dd}"
             return out
-        i = days.index(dd)
-        if i < 1:
-            out["reason"] = "无前一交易日"
-            return out
-        prev, today = days[i - 1], dd
-
-        hi_ret: list[float] = []
-        for (code,), g in p.group_by("ts_code", maintain_order=True):
-            ds = [str(x) for x in g["trade_date"].to_list()]
-            if prev not in ds or today not in ds:
-                continue
-            jp, jt = ds.index(prev), ds.index(today)
-            if jt < 1:
-                continue
-            c = g["close"].to_numpy().astype(float)
-            _, st = feature_engine.zt_flags(code, c)
-            if int(st[jp]) < 2:
-                continue
-            r = float(c[jt] / c[jt - 1] - 1.0) * 100.0
-            if r == r:
-                hi_ret.append(r)
 
         if not hi_ret:
             out["reason"] = "无昨日高标样本"
@@ -1219,24 +1312,11 @@ def emotion_gate(day: str) -> dict[str, Any]:
         # C：昨日涨停溢价 = 昨日所有涨停股，今日平均涨跌幅。
         # 2026-11-23 用户裁定：用真实日线算回来（此前字段恒为 None）。
         # 口径：昨日涨停（含首板与连板）→ 今日收盘相对昨收的平均涨幅。
-        prem_vals: list[float] = []
-        for (code,), g in p.group_by("ts_code", maintain_order=True):
-            ds = [str(x) for x in g["trade_date"].to_list()]
-            if prev not in ds or today not in ds:
-                continue
-            jp, jt = ds.index(prev), ds.index(today)
-            if jt < 1:
-                continue
-            c = g["close"].to_numpy().astype(float)
-            _, st = feature_engine.zt_flags(code, c)
-            if int(st[jp]) < 1:                  # 昨日未涨停 → 不进溢价样本
-                continue
-            r = float(c[jt] / c[jt - 1] - 1.0) * 100.0
-            if r == r:
-                prem_vals.append(r)
         premium = round(sum(prem_vals) / len(prem_vals), 2) if prem_vals else None
         out.update({
             "available": True,
+            "intraday": intraday_used,
+            "as_of": as_of or None,
             "n_high": n,
             "avg_ret": round(avg, 2),
             "limit_down_share": round(dt_share, 3),
@@ -1256,8 +1336,9 @@ def emotion_gate(day: str) -> dict[str, Any]:
         out["verdict"] = ("情绪不佳 → 停手/控仓" if reasons else "情绪可做")
     except Exception as e:  # noqa: BLE001
         out["reason"] = f"{type(e).__name__}: {e}"
-    # 只缓存成功结果；失败（面板缺失等）不缓存，下次仍可重试
-    if out.get("available"):
+    # 只缓存成功结果；失败（面板缺失等）不缓存，下次仍可重试。
+    # 盘中读数不缓存：行情每 30 秒在变，缓存会把 09:30 的判断留到 10:30。
+    if out.get("available") and not out.get("intraday"):
         if len(_GATE_CACHE) >= _GATE_CACHE_MAX:
             _GATE_CACHE.pop(next(iter(_GATE_CACHE)))
         _GATE_CACHE[key] = copy.deepcopy(out)
@@ -1274,12 +1355,13 @@ def sync(day: str | None = None, *, frames: list[dict[str, Any]] | None = None,
         notes: list[str] = []
         # 2026-11-16 用户裁定：改为「题材内有一字板 → 买该题材其他二板」。
         # 旧实现 collect_two_board 是「全部二板都买」，方向与策略原意不符。
-        gate = emotion_gate(day)
+        gate = emotion_gate(day, intraday=True)
         # 市场级冰点闸门（用户 2026-11-23 裁定）：冰点不空仓，按系数缩减仓位。
         # persist=True：命中即新增样本入库（用户裁定 B，与时俱进更新冰点库）。
+        # intraday=True：盘中用实时行情算读数（不写样本库），不等收盘才有数。
         try:
             from backend import ice_gate
-            ice = ice_gate.assess(day, persist=True)
+            ice = ice_gate.assess(day, persist=True, intraday=True)
         except Exception as exc:  # noqa: BLE001 - 冰点不可用不阻塞主流程
             ice = {"available": False, "is_ice": False, "size_factor": 1.0,
                    "level": None, "reason": f"{type(exc).__name__}: {exc}"}
@@ -1342,6 +1424,10 @@ def sync(day: str | None = None, *, frames: list[dict[str, Any]] | None = None,
                 # 同一行出现两个不同的换手率（13:36 实测 2.45% vs 2.82%）。
                 cur["turnover"] = new["turnover"]
                 cur["industry"] = new["industry"]
+                # 题材标签是分组依据（2026-11-24 新增），随题材池刷新同步；
+                # 旧单缺这两个字段时也能补上，不改成交判定。
+                cur["guitu_theme"] = new.get("guitu_theme")
+                cur["guitu_rabbits"] = new.get("guitu_rabbits")
                 cur["queue"] = new["queue"] if cur["status"] != "filled" else cur["queue"]
                 # 挂单起点只在首次生成时固化，后续帧不得覆盖（否则又是未来信息）
                 cur["broken_at_entry"] = cur.get("broken_at_entry",
@@ -1435,11 +1521,13 @@ def _ice_payload_from(ice: dict[str, Any] | None, day: str) -> dict[str, Any]:
     else:
         try:
             from backend import ice_gate
-            r = ice_gate.assess(day)
+            r = ice_gate.assess(day, intraday=True)
         except Exception as exc:  # noqa: BLE001
             return {"available": False, "reason": f"{type(exc).__name__}: {exc}"}
     return {
         "available": bool(r.get("available")),
+        "intraday": bool(r.get("intraday")),
+        "as_of": r.get("as_of"),
         "level": r.get("level"),
         "is_ice": bool(r.get("is_ice")),
         "ice_type": r.get("ice_type"),
@@ -1460,11 +1548,13 @@ def _emotion_payload_from(gate: dict[str, Any] | None, day: str) -> dict[str, An
         g = gate
     else:
         try:
-            g = emotion_gate(day)
+            g = emotion_gate(day, intraday=True)
         except Exception as exc:  # noqa: BLE001
             return {"available": False, "reason": f"{type(exc).__name__}: {exc}"}
     return {
         "available": bool(g.get("available")),
+        "intraday": bool(g.get("intraday")),
+        "as_of": g.get("as_of"),
         "blocked": bool(g.get("blocked")),
         "verdict": g.get("verdict"),
         "n_high": g.get("n_high"),
