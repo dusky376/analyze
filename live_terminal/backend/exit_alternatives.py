@@ -419,6 +419,19 @@ def analyze() -> dict[str, Any]:
             bi = next((k for k, r in enumerate(d[ei + 1:]) if not r["zt"]), None)
             if bi is not None:
                 row["context"]["break_is_limit_down"] = is_dt(d[ei + 1:][bi])
+        # 2026-11-25：盘中信号卖出的 trades 当日日线还没落盘 → 上面判不出
+        # break_is_limit_down。用交易记录自带的字段兜底，保证环境分组覆盖全部样本
+        # （否则新样本全落进 None 桶，统计表与实际不符）。
+        if row["context"]["break_is_limit_down"] is None:
+            v = t.get("break_is_limit_down")
+            if isinstance(v, bool):
+                row["context"]["break_is_limit_down"] = v
+            elif t.get("exit_env", {}).get("rule") == "broke_and_stayed_intraday_sell":
+                # 这类是「买入日收盘仍炸板」→ 卖出窗口次日，断板性质按未封住记
+                row["context"]["break_is_limit_down"] = False
+                if not row["context"]["break_date"]:
+                    row["context"]["break_date"] = str(
+                        t.get("exit_date") or "")[:10].replace("-", "")
         row["context"]["market_breadth"] = _breadth_snapshot(break_date)
         rows.append(row)
 

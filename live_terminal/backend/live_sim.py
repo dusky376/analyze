@@ -1073,6 +1073,84 @@ def _minute_points(day: str, code: str | None,
     return sorted(out, key=lambda x: x["t"])
 
 
+def _close_by_plan(pos: dict[str, Any], plan: dict[str, Any],
+                   decision: dict[str, Any]) -> dict[str, Any]:
+    """按 sell_plan 的决策价真正平仓（2026-11-25 用户要求及时显示卖出）。
+
+    - 卖出价 = decision.price（信号价 / 时间兜底价）
+    - 成本仍走 costs.DEFAULT（万0.84免五单一口径）
+    - 写入 exit_source / signal 说明，前端据此区分「信号卖出」与「兜底卖出」
+    """
+    from backend import costs
+
+    p = dict(pos)
+    entry = float(p.get("entry_price") or 0.0)
+    exit_px = float(decision.get("price") or 0.0)
+    if not (entry > 0 and exit_px > 0):
+        p["status"] = "holding"
+        p["state_note"] = "卖出计划价格非法，保持持有（不编造价格）"
+        return p
+
+    notional = p.get("notional") or p.get("order_amount") or None
+    qty = p.get("qty")
+    try:
+        notional = float(notional) if notional else None
+    except (TypeError, ValueError):
+        notional = None
+    try:
+        qty = int(float(qty)) if qty else None
+    except (TypeError, ValueError):
+        qty = None
+    if notional is None and qty and entry > 0:
+        notional = round(entry * qty, 2)
+        p["notional"] = notional
+
+    cost_rate = costs.DEFAULT.round_trip_rate(notional)
+    gross = exit_px / entry - 1.0
+    win = plan.get("window") or {}
+    kind = decision.get("kind")  # signal / fallback
+
+    p.update({
+        "status": "closed",
+        "exit_date": str(win.get("date") or _cn_today_str()),
+        "exit_price": round(exit_px, 3),
+        "exit_price_basis": (
+            f"分钟级信号卖出（{decision.get('signal_time') or '—'}）："
+            f"{decision.get('reason')}" if kind == "signal"
+            else f"时间边界兜底卖出：{decision.get('reason')}"),
+        "exit_source": ("signal" if kind == "signal" else "fallback"),
+        "exit_signal_time": decision.get("signal_time"),
+        "exit_intraday": bool(win.get("intraday")),
+        "gross_return": round(gross, 6),
+        "r_net": round(gross - cost_rate, 6),
+        "net_return": round(gross - cost_rate, 6),
+        "net_basis": "万0.84免五单一口径",
+        "cost_model": "backend/costs.py::DEFAULT",
+        "cost_rate": round(cost_rate, 6),
+        "cost_notional": notional,
+        "exit_rule_actual": (
+            "买入日收盘仍炸板 → 次日10:00前（信号/兜底）" if
+            plan.get("entry_kind") == "broke_and_stayed"
+            else "买入日未炸板 → 断板日收盘前（信号/兜底）"),
+        "state_note": (f"按卖出规则平仓：{decision.get('reason')}"),
+        # 与 settle() 保持字段一致（历史消费者/测试依赖）
+        "board_days": 0,
+        "exit_blocked": False,
+        "exit_blocked_days": 0,
+        "exit_blocked_dates": [],
+        "last_checked": datetime.now().strftime("%Y-%m-%d"),
+        # 卖法对照/环境分组需要的上下文（2026-11-25）：
+        # 这些票是「买入日收盘仍炸板」→ 次日信号卖出，断板性质=未封住。
+        "break_is_limit_down": False,
+        "exit_env": {
+            "rule": "broke_and_stayed_intraday_sell",
+            "signal_time": decision.get("signal_time"),
+            "signal_kind": kind,
+        },
+    })
+    return p
+
+
 def settle(pos: dict[str, Any], daily: list[dict[str, Any]]) -> dict[str, Any]:
     """按真实日线更新一笔持仓（纯函数，返回新 dict，不改入参）。
 
@@ -1097,6 +1175,18 @@ def settle(pos: dict[str, Any], daily: list[dict[str, Any]]) -> dict[str, Any]:
     except Exception as exc:  # noqa: BLE001 - 卖出计划失败不影响既有结算
         p["sell_plan"] = {"available": False,
                           "reason": f"{type(exc).__name__}: {exc}"}
+    # 2026-11-25 用户要求：「模拟买卖要及时更新，不能只显示买不显示卖」。
+    # 盘中若 sell_plan 已明确给出卖出价（信号触发或时间兜底），
+    # **按该价真正平仓**并写 trades，而不是只挂在 sell_plan 字段上。
+    # 只对**盘中（今天）**生效：历史日期继续走下方基于日线的 find_exit 结算，
+    # 保证历史回放口径不变、可复现（2026-11-25）。
+    _plan = p.get("sell_plan") or {}
+    _dec = (_plan.get("decision") or {}) if _plan.get("available") else {}
+    _win = (_plan.get("window") or {}) if _plan.get("available") else {}
+    if (_dec.get("action") == "sell" and _dec.get("price")
+            and _win.get("intraday")):
+        return _close_by_plan(p, _plan, _dec)
+
     exit_row, status = find_exit(str(p["entry_date"]), daily, code=code)
     p["last_checked"] = datetime.now().strftime("%Y-%m-%d")
     if status != "closed" or exit_row is None:
