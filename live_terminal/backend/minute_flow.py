@@ -34,6 +34,7 @@
 from __future__ import annotations
 
 import json
+import time as _time
 import urllib.request
 from typing import Any
 
@@ -41,7 +42,14 @@ _BASE = ("http://proxy.finance.qq.com/ifzqgtimg/appstock/app/minute/query"
          "?code={sym}")
 
 #: (code, day) -> [(HHMM, price, cum_amount_yuan)] | None
+#: 仅用于**历史/事后**（amount_between 等）；盘中要用 live_series（带 TTL）。
 _CACHE: dict[tuple[str, str], list[tuple[str, float, float]] | None] = {}
+
+#: 盘中实时分时的短缓存：(code, day) -> (monotonic_ts, points)
+#: 用户 2026-11-25：「盘中也没有实时显示」——永久缓存会把 09:30 的分时冻结一整天。
+_LIVE_TTL = 8.0
+_LIVE_CACHE: dict[tuple[str, str],
+                  tuple[float, list[dict[str, Any]] | None]] = {}
 
 
 def _symbol(code: str) -> str:
@@ -55,14 +63,10 @@ def _symbol(code: str) -> str:
     return f"sz{c}"
 
 
-def minute_series(code: str, day: str) -> list[tuple[str, float, float]] | None:
-    """当日分钟序列 [(HHMM, price, 累计成交额元)]；取不到返回 None。"""
-    key = (str(code).zfill(6), str(day))
-    if key in _CACHE:
-        return _CACHE[key]
-    out: list[tuple[str, float, float]] | None = None
+def _fetch(code: str, day: str) -> list[tuple[str, float, float]] | None:
+    """拉一次腾讯分钟接口；日期不匹配返回 None（不拿别的交易日冒充）。"""
+    sym = _symbol(code)
     try:
-        sym = _symbol(code)
         req = urllib.request.Request(_BASE.format(sym=sym),
                                      headers={"User-Agent": "Mozilla/5.0"})
         raw = urllib.request.urlopen(req, timeout=15).read().decode("utf-8",
@@ -74,21 +78,62 @@ def minute_series(code: str, day: str) -> list[tuple[str, float, float]] | None:
         date = str(((node.get("data") or {}).get("date")) or "")
         want = str(day).replace("-", "")
         if date and want and date[:8] != want[:8]:
-            out = None
-        else:
-            s: list[tuple[str, float, float]] = []
-            for line in arr:
-                p = str(line).split()
-                if len(p) >= 4:
-                    try:
-                        s.append((p[0], float(p[1]), float(p[3])))
-                    except (TypeError, ValueError):
-                        continue
-            out = s or None
+            return None
+        s: list[tuple[str, float, float]] = []
+        for line in arr:
+            p = str(line).split()
+            if len(p) >= 4:
+                try:
+                    s.append((p[0], float(p[1]), float(p[3])))
+                except (TypeError, ValueError):
+                    continue
+        return s or None
     except Exception:  # noqa: BLE001
-        out = None
+        return None
+
+
+def minute_series(code: str, day: str) -> list[tuple[str, float, float]] | None:
+    """当日分钟序列 [(HHMM, price, 累计成交额元)]；取不到返回 None。"""
+    key = (str(code).zfill(6), str(day))
+    if key in _CACHE:
+        return _CACHE[key]
+    out = _fetch(code, day)
     _CACHE[key] = out
     return out
+
+
+def live_series(code: str, day: str, *,
+                ttl: float | None = None) -> list[dict[str, Any]] | None:
+    """盘中实时分时（1 分钟粒度），带短 TTL 缓存。
+
+    与 :func:`minute_series` 的区别：后者是**永久缓存**，适合事后算成交额；
+    盘中画分时图必须能随行情推进，所以这里每 ``ttl`` 秒（默认 8 秒）重拉。
+
+    Returns:
+        [{"t": "09:31", "price": 12.34, "cum_volume": 123.0, "cum_amount": 456.0}]
+        或 None（接口失败/日期不匹配）。
+    """
+    key = (str(code).zfill(6), str(day))
+    now = _time.monotonic()
+    hit = _LIVE_CACHE.get(key)
+    if hit is not None and now - hit[0] < (ttl if ttl is not None else _LIVE_TTL):
+        return hit[1]
+    raw = _fetch(code, day)
+    pts: list[dict[str, Any]] | None = None
+    if raw:
+        pts = []
+        for t, px, amt in raw:
+            if len(t) != 4 or not t.isdigit():
+                continue
+            pts.append({"t": f"{t[:2]}:{t[2:]}", "price": px,
+                        "cum_amount": amt})
+    _LIVE_CACHE[key] = (now, pts)
+    return pts
+
+
+def _reset_live_cache() -> None:
+    """测试/强制刷新用：清空盘中短缓存（不影响历史永久缓存）。"""
+    _LIVE_CACHE.clear()
 
 
 def _hhmm_of(ts: str) -> str | None:

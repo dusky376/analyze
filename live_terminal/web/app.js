@@ -308,9 +308,17 @@ function toggleInlineChart(tr, code, name) {
 
   refreshInlineChart();
   if (inlineChart.timer) clearInterval(inlineChart.timer);
+  // 2026-11-25 用户裁定：「要当天实时的 K 线和分时图」。
+  // 盘中 15 秒刷新（后端 1 分钟分时 + 实时快照），非交易时段 60 秒即可。
+  const trading = (() => {
+    const d = new Date(), m = d.getHours() * 60 + d.getMinutes();
+    return d.getDay() >= 1 && d.getDay() <= 5
+      && ((m >= 9 * 60 + 15 && m <= 11 * 60 + 32)
+          || (m >= 12 * 60 + 58 && m <= 15 * 60 + 5));
+  })();
   inlineChart.timer = setInterval(() => {
     if (inlineChart.code) refreshInlineChart();
-  }, 60000);
+  }, trading ? 15000 : 60000);
 }
 
 async function refreshInlineChart() {
@@ -340,13 +348,20 @@ function renderInlineChart() {
   const canvas = detail.querySelector(".chart-canvas");
   if (!canvas) return;
   if (inlineChart.tab === "kline") {
+    const k = d.kline || {};
+    const lb = (k.bars || [])[k.bars ? k.bars.length - 1 : 0] || {};
     if (meta) meta.textContent =
-      `K 线 ${d.kline.bars?.length || 0} 根 · ${d.kline.live ? "盘中实时 @" + fmtTs(d.kline.as_of) : "已收盘定格"} · ${esc(d.generated_at)}`;
-    drawKline(canvas, d.kline.bars || []);
+      `日 K ${k.bars?.length || 0} 根 · 最新 ${lb.date || "—"} ${has(lb.close) ? fmtNum(lb.close) : ""}`
+      + ` · ${k.live ? "盘中实时 @" + fmtTs(k.as_of) : (k.today_included ? "当日快照 @" + fmtTs(k.as_of) : "已收盘定格")}`
+      + ` · 刷新 ${fmtTs(d.generated_at)}`;
+    drawKline(canvas, k.bars || []);
   } else {
+    const it = d.intraday || {};
+    const src = it.source === "tencent_1min" ? "1 分钟实时" : "5 分钟留档";
     if (meta) meta.textContent =
-      `分时 ${d.intraday.n || 0} 点（${d.intraday.live ? "末点实时价" : "留档快照"}）· ${esc(d.generated_at)}`;
-    drawIntraday(canvas, d.intraday.points || [], d.intraday.prev_close);
+      `分时 ${it.n || 0} 点 · ${src} · 最新 ${it.as_of || "—"}`
+      + ` · ${it.live ? "盘中实时" : (it.day || "")} · 刷新 ${fmtTs(d.generated_at)}`;
+    drawIntraday(canvas, it.points || [], it.prev_close);
   }
 }
 
@@ -385,30 +400,62 @@ function drawKline(canvas, bars) {
     ctx.fillRect(x - Math.max(1, cw * 0.32), top,
                  Math.max(2, cw * 0.64), Math.max(1, bot - top));
   });
+  const lastB = bars[bars.length - 1];
+  // 日期刻度：首/中/末，末根（当天）单独强调，避免「看不出最后一根是哪天」
+  ctx.font = "10px sans-serif";
+  ctx.fillStyle = "rgba(255,255,255,.45)";
+  const mid = bars[Math.floor(bars.length / 2)];
+  ctx.fillText(`${bars[0].date}`, pad, H - 6);
+  if (mid) ctx.fillText(`${mid.date}`, W / 2 - 26, H - 6);
+  ctx.fillStyle = lastB.live ? UP_COLOR : "rgba(255,255,255,.75)";
+  ctx.font = "bold 10px sans-serif";
+  const lastLabel = `${lastB.date}${lastB.live ? " 今" : ""}`;
+  ctx.fillText(lastLabel, W - pad - 76, H - 6);
   ctx.fillStyle = "rgba(255,255,255,.55)"; ctx.font = "11px sans-serif";
   ctx.fillText(`高 ${hi.toFixed(2)}  低 ${lo.toFixed(2)}`, pad, 14);
-  ctx.fillText(`${bars[0].date}`, pad, H - 6);
-  const lastB = bars[bars.length - 1];
-  ctx.fillStyle = (lastB.close||0) >= (lastB.open||0) ? UP_COLOR : DOWN_COLOR;
-  ctx.fillText(`${lastB.close?.toFixed(2)}${lastB.live ? " (盘中)" : ""}`, W - 100, 14);
+  ctx.fillStyle = (lastB.close || 0) >= (lastB.open || 0) ? UP_COLOR : DOWN_COLOR;
+  ctx.font = "bold 12px sans-serif";
+  ctx.fillText(`${lastB.close?.toFixed(2)}${lastB.live ? " (盘中)" : ""}`, W - 130, 14);
+  ctx.font = "10px sans-serif"; ctx.fillStyle = "rgba(255,255,255,.45)";
+  ctx.fillText(`开 ${fmtNum(lastB.open)} 高 ${fmtNum(lastB.high)} 低 ${fmtNum(lastB.low)}`,
+               W - 230, 28);
+}
+
+/* 分时横轴：把 09:30–11:30 / 13:00–15:00 映射到 0–240 分钟 */
+function sessionMinute(t) {
+  const m = String(t || "").match(/^(\d{2}):(\d{2})/);
+  if (!m) return null;
+  const mins = Number(m[1]) * 60 + Number(m[2]);
+  if (mins < 9 * 60 + 30 || mins > 15 * 60) return null;
+  if (mins <= 11 * 60 + 30) return mins - (9 * 60 + 30);
+  if (mins < 13 * 60) return 120;                 // 午休收敛到 11:30
+  return 120 + (mins - 13 * 60);
 }
 
 function drawIntraday(canvas, pts, prevClose) {
-  if (!canvas || !pts.length) return;
-  const ctx = canvas.getContext("2d");
+  if (!canvas) return;
+  const ctx0 = canvas.getContext("2d");
+  ctx0.clearRect(0, 0, canvas.width, canvas.height);
+  if (!pts || !pts.length) {
+    ctx0.fillStyle = "rgba(255,255,255,.45)";
+    ctx0.font = "12px sans-serif";
+    ctx0.fillText("当日暂无分时数据（盘前或采集未开始）", 42, 40);
+    return;
+  }
+  const ctx = ctx0;
   const W = canvas.width, H = canvas.height;
   ctx.clearRect(0, 0, W, H);
   const pad = 42;
   const vals = pts.map(p => p.price).filter(v => Number.isFinite(v));
   if (!vals.length) return;
   const pc = prevClose || pts[0].prev_close || pts[0].price;
-  // 交易软件分时：以昨收为中心，上下对称（涨跌停幅度）
+  // 交易软件分时：以昨收为中心，上下对称（按当日最大偏离）
   const maxDev = Math.max(...vals.map(v => Math.abs(v - pc))) || pc * 0.02;
   const hi = pc + maxDev * 1.05, lo = pc - maxDev * 1.05;
   const rng = (hi - lo) || 1;
   const y = (v) => pad + (H - pad * 2) * (1 - (v - lo) / rng);
-  const x = (i) => pad + (W - pad * 2) * (i / Math.max(1, pts.length - 1));
-  // 网格 + 昨收虚线（基准）
+  const xOfMin = (min) => pad + (W - pad * 2) * (Math.max(0, Math.min(240, min)) / 240);
+  // 网格 + 价格/涨跌幅刻度
   ctx.lineWidth = 1;
   for (let i = 0; i <= 4; i++) {
     const yy = pad + (H - pad * 2) * i / 4;
@@ -421,28 +468,47 @@ function drawIntraday(canvas, pts, prevClose) {
     ctx.fillText(`${price.toFixed(2)}`, 4, yy + 3);
     ctx.fillText(`${pct >= 0 ? "+" : ""}${pct.toFixed(2)}%`, W - 46, yy + 3);
   }
+  // 时间刻度：09:30 / 10:30 / 11:30–13:00 / 14:00 / 15:00
+  ctx.fillStyle = "rgba(255,255,255,.4)"; ctx.font = "10px sans-serif";
+  ctx.fillText("09:30", pad - 6, H - 6);
+  ctx.fillText("10:30", xOfMin(60) - 12, H - 6);
+  ctx.fillText("11:30/13:00", xOfMin(120) - 28, H - 6);
+  ctx.fillText("14:00", xOfMin(180) - 12, H - 6);
+  ctx.fillText("15:00", W - pad - 26, H - 6);
+  ctx.strokeStyle = "rgba(255,255,255,.08)";
+  ctx.beginPath();
+  ctx.moveTo(xOfMin(120), pad); ctx.lineTo(xOfMin(120), H - pad);
+  ctx.stroke();
+  // 昨收虚线
   ctx.setLineDash([4, 4]); ctx.strokeStyle = "rgba(255,255,255,.4)";
   ctx.beginPath(); ctx.moveTo(pad, y(pc)); ctx.lineTo(W - pad, y(pc)); ctx.stroke();
   ctx.setLineDash([]);
-  // 价格线：白色（交易软件标准）；收盘相对昨收的涨跌用颜色标注末点
+  // 价格线（白）：用交易时段坐标，而不是「点序号」—— 否则 10:00 的价格会画在 15:00 位置
   ctx.strokeStyle = "#ffffff"; ctx.lineWidth = 1.6;
   ctx.beginPath();
-  pts.forEach((p, i) => {
-    const px = x(i), py = y(p.price);
-    if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+  let started = false;
+  const coords = [];
+  pts.forEach((p) => {
+    const min = sessionMinute(p.t);
+    if (min === null || !Number.isFinite(p.price)) return;
+    const px = xOfMin(min), py = y(p.price);
+    coords.push([px, py]);
+    if (!started) { ctx.moveTo(px, py); started = true; } else ctx.lineTo(px, py);
   });
   ctx.stroke();
   const last = pts[pts.length - 1];
-  const lastColor = last.price > pc ? UP_COLOR : last.price < pc ? DOWN_COLOR : FLAT_COLOR;
-  ctx.fillStyle = lastColor;
-  ctx.beginPath(); ctx.arc(x(pts.length - 1), y(last.price), 3.5, 0, Math.PI * 2); ctx.fill();
-  const chg = (last.price - pc) / pc * 100;
-  ctx.font = "bold 12px sans-serif";
-  ctx.fillText(`${last.price.toFixed(2)}  ${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%${last.live ? " (实时)" : ""}`,
-               W - 200, 14);
-  ctx.font = "11px sans-serif"; ctx.fillStyle = "rgba(255,255,255,.55)";
-  ctx.fillText(`${pts[0].t}`, pad, H - 6);
-  ctx.fillText(`${last.t}`, W - 70, H - 6);
+  const lastMin = sessionMinute(last.t);
+  if (lastMin !== null && Number.isFinite(last.price)) {
+    const lastColor = last.price > pc ? UP_COLOR : last.price < pc ? DOWN_COLOR : FLAT_COLOR;
+    ctx.fillStyle = lastColor;
+    ctx.beginPath(); ctx.arc(xOfMin(lastMin), y(last.price), 3.5, 0, Math.PI * 2); ctx.fill();
+    const chg = (last.price - pc) / pc * 100;
+    ctx.font = "bold 12px sans-serif";
+    ctx.fillText(`${last.price.toFixed(2)}  ${chg >= 0 ? "+" : ""}${chg.toFixed(2)}%`,
+                 W - 200, 14);
+    ctx.font = "10px sans-serif"; ctx.fillStyle = "rgba(255,255,255,.45)";
+    ctx.fillText(`${String(last.t).slice(0, 5)} 现价`, W - 200, 28);
+  }
 }
 
 function renderPairs(pairs, day) {

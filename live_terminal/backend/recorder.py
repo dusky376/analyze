@@ -321,8 +321,8 @@ def _tick() -> None:
     if not _is_trading_day(now):
         return  # 周末 / 法定节假日不采
     t = now.time()
-    if t < dtime(9, 15) or t > dtime(15, 10):
-        return  # 非交易时段（收盘后再给 10 分钟让行情定格）
+    if t < dtime(9, 15) or t > dtime(15, 15):
+        return  # 非交易时段（收盘后再给 15 分钟让行情定格）
     if dtime(11, 32) <= t < dtime(12, 58):
         return  # 午间休市不重复留档
 
@@ -340,6 +340,18 @@ def _tick() -> None:
         _snap_breadth(folder)
     if time.time() - _state["last_pool"] >= POOL_EVERY:
         _snap_pools(folder)
+    # 收盘定格（15:05 后抓最后一帧行情写 panel_live）：每日一次。
+    # 2026-11-25 修复：此前没有任何调用方，panel_live 停在 11-23，
+    # 次日 K 线/结算/情绪闸门都看不到 T-1 收盘。
+    if t >= dtime(15, 5) and _state.get("eod_day") != now.strftime("%Y%m%d"):
+        try:
+            from backend import feeds
+            res = feeds.persist_eod_bar(now.strftime("%Y%m%d"))
+            _state["eod_result"] = res
+            if res.get("ok"):
+                _state["eod_day"] = now.strftime("%Y%m%d")
+        except Exception as exc:  # noqa: BLE001 - 定格失败不阻塞采集
+            _state["last_error"] = f"eod: {type(exc).__name__}: {exc}"
 
 
 def _loop() -> None:

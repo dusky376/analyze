@@ -707,6 +707,94 @@ def _persist_live_bar(add: pl.DataFrame, trade_date: date) -> None:
             pass
 
 
+def eod_bar_from_quotes(day: str, *,
+                        quotes: pl.DataFrame | None = None
+                        ) -> tuple[pl.DataFrame | None, str]:
+    """从**当日最后一帧行情**构建与面板同构的收盘 bar（真实数据，不合成）。
+
+    优先用传入的 quotes（盘中实时快照）；否则读 `data/live/<day>/quotes`
+    最后一帧（收盘后/次日恢复时用）。行情时点必须属于 day，否则拒绝。
+    """
+    d = str(day).replace("-", "").replace("/", "")[:8]
+    if quotes is None:
+        qdir = paths.data_dir() / "live" / d / "quotes"
+        files = sorted(qdir.glob("quotes_*.parquet")) if qdir.is_dir() else []
+        if not files:
+            return None, f"{d} 无行情留档"
+        try:
+            quotes = pl.read_parquet(files[-1])
+        except Exception as exc:  # noqa: BLE001
+            return None, f"读取 {files[-1].name} 失败: {type(exc).__name__}: {exc}"
+    if quotes is None or quotes.height == 0:
+        return None, "行情为空"
+    try:
+        qt = str(quotes["quote_time"].max() or "")
+    except Exception:  # noqa: BLE001
+        return None, "行情无 quote_time"
+    if qt[:8] != d:
+        return None, f"行情时点 {qt} 不属于 {d}（不拿别的交易日冒充收盘）"
+    need = {"open", "high", "low", "price"}
+    if not need.issubset(set(quotes.columns)):
+        return None, f"行情缺列: {sorted(need - set(quotes.columns))}"
+    bar = (quotes.filter((pl.col("open") > 0) & (pl.col("price") > 0))
+           .select([
+               pl.lit(date(int(d[:4]), int(d[4:6]), int(d[6:]))).alias("trade_date"),
+               pl.col("ts_code"),
+               pl.col("open"), pl.col("high"), pl.col("low"),
+               pl.col("price").alias("close"),
+               pl.col("volume"), pl.col("amount"), pl.col("turnover"),
+               pl.col("pct").alias("pct_chg"),
+           ]))
+    if bar.height == 0:
+        return None, "行情无有效价格"
+    return bar, qt
+
+
+def persist_eod_bar(day: str | None = None, *,
+                    quotes: pl.DataFrame | None = None) -> dict[str, Any]:
+    """把某交易日收盘 bar 落到 `panel_live.parquet`（幂等）。
+
+    为什么需要：`_persist_live_bar()` 此前**没有任何调用方**，导致 15:05 后
+    当日收盘日线从未落盘（2026-11-24 实测 panel_live 停在 11-23），
+    次日结算/K 线/情绪闸门只能看到 T-2。
+
+    纪律：
+      * 只用当日真实行情快照（open/high/low/close 全部来自行情）；
+      * 覆盖率不足（< 上一交易日 60%）拒绝写入，避免残缺日污染；
+      * 已有该日行 → 跳过（不覆盖收盘定格）。
+    """
+    d = str(day or datetime.now().strftime("%Y%m%d")).replace("-", "")[:8]
+    target = date(int(d[:4]), int(d[4:6]), int(d[6:]))
+    path = paths.panel_live_file()
+    prev_n = 0
+    if path.is_file():
+        try:
+            have = pl.read_parquet(path, columns=["trade_date"])
+            days = sorted(set(have["trade_date"].unique().to_list()))
+            if target in days:
+                return {"ok": True, "skipped": "already", "day": d}
+            earlier = [x for x in days if x < target]
+            if earlier:
+                prev_n = int(have.filter(
+                    pl.col("trade_date") == earlier[-1]).height)
+        except Exception:  # noqa: BLE001 - 读不了就交给 _persist_live_bar 处理
+            prev_n = 0
+    bar, info = eod_bar_from_quotes(d, quotes=quotes)
+    if bar is None:
+        return {"ok": False, "day": d, "reason": info}
+    # 覆盖率护栏：至少达到上一交易日行数的 60%
+    try:
+        base = int(prev_n) if prev_n else int(bar.height)
+        if base and bar.height / base < LIVE_MERGE_MIN_COVERAGE:
+            return {"ok": False, "day": d, "rows": bar.height,
+                    "reason": (f"覆盖率 {bar.height}/{base} "
+                               f"< {LIVE_MERGE_MIN_COVERAGE:.0%}，拒绝写入")}
+    except Exception:  # noqa: BLE001
+        pass
+    _persist_live_bar(bar, date(int(d[:4]), int(d[4:6]), int(d[6:])))
+    return {"ok": True, "day": d, "rows": bar.height, "as_of": info}
+
+
 def _quote_stamp(q: pl.DataFrame) -> str:
     """行情自带的数据时点（不是刷新时刻）：20261120161500 -> 2026-11-20T16:15:00。"""
     try:
