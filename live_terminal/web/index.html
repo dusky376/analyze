@@ -17,6 +17,7 @@
     </div>
   </div>
   <nav class="tabs" role="tablist">
+    <div class="tab-indicator" id="tabIndicator" aria-hidden="true"></div>
     <button class="tab-btn active" data-tab="today" type="button">今日作战台</button>
     <button class="tab-btn" data-tab="book" type="button">持仓与账本</button>
     <button class="tab-btn" data-tab="evo" type="button">进化与回放</button>
@@ -49,39 +50,63 @@
 
   <!-- ==================== TAB 1: 今日作战台 ==================== -->
   <div class="tab-pane active" id="pane-today">
-    <section class="hero">
+    <section class="hero spotlight reveal" style="--d:0ms">
       <div class="hero-main">
         <p class="eyebrow">今日交易状态 · 模拟盘验证</p>
         <h2 id="heroTitle">载入中…</h2>
         <p id="heroReason" class="muted">正在读取真实涨停池留档与行情快照。</p>
-        <div class="rules" id="rules"></div>
+        <details class="rules-details">
+          <summary>策略口径速览（买点 / 卖点 / 核心）</summary>
+          <div class="rules" id="rules"></div>
+        </details>
       </div>
       <div class="kpis">
-        <div class="kpi"><span>今日委托</span><strong id="kToday">--</strong><small>二板排板单</small></div>
-        <div class="kpi"><span>已成交</span><strong id="kFilled">--</strong><small>Q037 撮合</small></div>
-        <div class="kpi"><span>当前持仓</span><strong id="kHolding">--</strong><small>跨日持有</small></div>
-        <div class="kpi"><span>龟兔配对</span><strong id="kPairs">--</strong><small>同题材同身位</small></div>
+        <div class="kpi spotlight"><span>今日委托</span><strong id="kToday">--</strong><small>二板排板单</small></div>
+        <div class="kpi spotlight"><span>已成交</span><strong id="kFilled">--</strong><small>Q037 撮合</small></div>
+        <div class="kpi spotlight"><span>当前持仓</span><strong id="kHolding">--</strong><small>跨日持有</small></div>
+        <div class="kpi spotlight"><span>龟兔配对</span><strong id="kPairs">--</strong><small>同题材同身位</small></div>
       </div>
     </section>
 
-    <section class="panel" id="emotion">
+    <section class="panel spotlight reveal" id="emotion" style="--d:80ms">
       <div class="panel-head">
-        <h2>大盘情绪与市场冰点</h2>
-        <p class="muted">先看市场冰点（决定仓位系数），再看个股情绪闸门（决定今日能否打板）</p>
+        <h2>大盘情绪、市场冰点与外盘风偏</h2>
+        <p class="muted">市场冰点（定基础仓位）× 外盘日韩美股风偏（前置风险系数）× 个股情绪闸门（决定今日能否打板）</p>
       </div>
-      <div class="grid-2">
-        <div class="env-group" id="iceBox">
+      <div class="grid-3">
+        <div class="env-group spotlight" id="iceBox">
           <h4>市场冰点 · 仓位档位</h4>
           <div class="empty-card">载入中…</div>
         </div>
-        <div class="env-group" id="emotionBox">
+        <div class="env-group spotlight" id="emotionBox">
           <h4>个股情绪 · 打板闸门</h4>
+          <div class="empty-card">载入中…</div>
+        </div>
+        <div class="env-group spotlight" id="overseasBox">
+          <h4>外盘风偏 · 日韩美股 / A50</h4>
           <div class="empty-card">载入中…</div>
         </div>
       </div>
     </section>
 
-    <section id="today" class="panel">
+    <section class="panel spotlight reveal" id="macroIntel" style="--d:130ms">
+      <div class="panel-head">
+        <h2>全球映射与国内重点快讯</h2>
+        <p class="muted" id="macroMeta">美股核心龙头映射 A 股板块 · 同花顺/东财 7×24 政策催化与个股雷区预警</p>
+      </div>
+      <div class="grid-2">
+        <div class="env-group spotlight" id="catalystBox">
+          <h4>美股映射与国内题材催化</h4>
+          <div class="empty-card">正在读取外盘龙头与国内政策映射…</div>
+        </div>
+        <div class="env-group spotlight" id="newsBox">
+          <h4>7×24 高信噪比快讯与雷区预警</h4>
+          <div class="empty-card">正在读取实时政策快讯…</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="today" class="panel spotlight reveal" style="--d:190ms">
       <div class="panel-head">
         <h2>今日二板 · 排板委托与买点质量</h2>
         <p class="muted" id="todayMeta">--</p>
@@ -111,7 +136,7 @@
 
   <!-- ==================== TAB 2: 持仓与账本 ==================== -->
   <div class="tab-pane" id="pane-book">
-    <section id="book" class="panel">
+    <section id="book" class="panel spotlight reveal" style="--d:0ms">
       <div class="panel-head">
         <h2>B1 实时模拟账本 · 每日买卖验证</h2>
         <p class="muted">两路径自适应卖点（炸板未回封→次日10:00前；封住→断板日收盘前；盘中急跌/冲高回落优先）。纯模拟，不发券商指令。</p>
@@ -179,7 +204,7 @@
 
   <!-- ==================== TAB 3: 进化与回放 ==================== -->
   <div class="tab-pane" id="pane-evo">
-    <section id="evolution" class="panel">
+    <section id="evolution" class="panel spotlight reveal" style="--d:0ms">
       <div class="panel-head">
         <h2>信息素路径权重与奖惩自进化（影子对照）</h2>
         <p class="muted" id="evoMeta">严格因果更新 · 每日自然挥发 10% · 跌停核按钮 2× 重罚</p>
@@ -216,7 +241,7 @@
       </div>
     </section>
 
-    <section id="backtest" class="panel">
+    <section id="backtest" class="panel spotlight reveal" style="--d:100ms">
       <div class="panel-head">
         <h2>二板排板 · 历史回放（只读参考）</h2>
         <p class="muted" id="btMeta">--</p>

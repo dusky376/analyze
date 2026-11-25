@@ -276,7 +276,10 @@ def _trade_markers(code: str) -> list[dict[str, Any]]:
         if not Path(sf).is_file():
             return []
         st = json.loads(Path(sf).read_text(encoding="utf-8"))
-        for p in (st.get("positions") or []) + (st.get("trades") or []):
+        raw_pos = st.get("positions")
+        pos_list = list(raw_pos.values()) if isinstance(raw_pos, dict) else list(raw_pos or [])
+        tr_list = list(st.get("trades") or [])
+        for p in pos_list + tr_list:
             if str(p.get("ts_code") or "").zfill(6) != c:
                 continue
             ed = str(p.get("entry_date") or "")
@@ -327,10 +330,23 @@ def intraday(code: str, day: str | None = None, *,
     c = str(code).zfill(6)
     today8 = _cn_today()
     if not day:
-        dirs = sorted((x.name for x in LIVE.iterdir()
-                       if x.is_dir() and x.name.isdigit()
-                       and (x / "quotes").is_dir()), reverse=True) if LIVE.is_dir() else []
-        day = today8 if today8 in dirs else (dirs[0] if dirs else today8)
+        # 交易日 09:25 起默认直接查「今天」实时 1 分钟分时，不再等本地 quotes 留档目录建好
+        use_today = False
+        try:
+            from backend import market_clock
+            tz = market_clock.TZ_CN
+            now_cn = datetime.now(tz) if tz else datetime.now()
+            if market_clock.is_trading_day("CN", now=now_cn) and now_cn.strftime("%H%M") >= "0925":
+                use_today = True
+        except Exception:  # noqa: BLE001
+            pass
+        if use_today:
+            day = today8
+        else:
+            dirs = sorted((x.name for x in LIVE.iterdir()
+                           if x.is_dir() and x.name.isdigit()
+                           and (x / "quotes").is_dir()), reverse=True) if LIVE.is_dir() else []
+            day = today8 if today8 in dirs else (dirs[0] if dirs else today8)
     d = _compact(day)
     is_today = d == today8
 

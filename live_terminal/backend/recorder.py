@@ -49,6 +49,7 @@ THEME_EVERY = 60.0
 THEME_START = dtime(9, 25)      # 竞价定格后再抓，避免把未定格的竞价标签当决策依据
 THEME_END = dtime(15, 5)        # 与日线收盘闸门一致；此后抓到的记为「收盘定格」
 THEME_TICK = 5.0                # 独立线程的检查粒度（不阻塞主 tick）
+INTEL_EVERY = 180.0             # 外盘指数 + 7×24 政策快讯刷新间隔（秒，08:30 起盘前即采）
 TICK = 3.0
 
 QUOTE_COLS = [
@@ -69,6 +70,7 @@ _state: dict[str, Any] = {
     "last_breadth": 0.0,
     "last_pool": 0.0,
     "last_theme": 0.0,
+    "last_intel": 0.0,
     "last_theme_error": None,
     "day": None,
 }
@@ -316,12 +318,30 @@ def _is_trading_day(now: datetime) -> bool:
         return now.weekday() < 5
 
 
+def _snap_macro_intel(day_str: str) -> None:
+    """盘前（08:30 起）与盘中定时留档外盘日韩美股指数 + 国内 7×24 快讯。"""
+    try:
+        from backend import overseas
+        overseas.snapshot(force=True, save=True, day=day_str)
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        from backend import news_feed
+        news_feed.snapshot(force=True, save=True, day=day_str)
+    except Exception:  # noqa: BLE001
+        pass
+    _state["last_intel"] = time.time()
+
+
 def _tick() -> None:
     now = datetime.now()
     _state["last_tick"] = now.isoformat(timespec="seconds")
     if not _is_trading_day(now):
         return  # 周末 / 法定节假日不采
     t = now.time()
+    # 08:30–15:20 定时采外盘（日经/韩国08:00开盘 + 美股隔夜）与国内快讯，早于 09:15 竞价落盘
+    if dtime(8, 30) <= t <= dtime(15, 20) and time.time() - _state["last_intel"] >= INTEL_EVERY:
+        _snap_macro_intel(now.strftime("%Y%m%d"))
     if t < dtime(9, 15) or t > dtime(15, 15):
         return  # 非交易时段（收盘后再给 15 分钟让行情定格）
     if dtime(11, 32) <= t < dtime(12, 58):

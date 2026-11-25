@@ -81,19 +81,114 @@ function setNotice(id, msg) {
 const state = {
   activeTab: "today",
   posFilter: "all",
+  catTab: "us",
   lastLiveData: null,
+  lastMacroData: null,
   lastGeneratedAt: null,
+  serverBuild: null,
   marketTrading: false,
-  inFlight: { health: false, live: false, evo: false, bt: false, exitAlt: false },
+  inFlight: { health: false, live: false, macro: false, evo: false, bt: false, exitAlt: false },
   loaded: { evo: false, bt: false, exitAlt: false },
   sse: null,
 };
 
-/* --------------------------------------------------------------- tabs */
+/* --------------------------------------------------------------- tabs & Apple motion */
+function positionTabIndicator() {
+  const ind = $("#tabIndicator");
+  const active = $(".tab-btn.active");
+  if (!ind || !active) return;
+  const x = active.offsetLeft;
+  const w = active.offsetWidth;
+  if (w > 0) {
+    ind.style.width = `${w}px`;
+    ind.style.transform = `translate3d(${x}px, 0, 0)`;
+    ind.style.opacity = "1";
+  }
+}
+
+let _revealObs = null;
+function triggerReveal(root = document) {
+  const nodes = $$(".reveal", root);
+  if (!nodes.length) return;
+  const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduced || typeof IntersectionObserver === "undefined") {
+    nodes.forEach((n) => n.classList.add("in-view"));
+    return;
+  }
+  if (!_revealObs) {
+    _revealObs = new IntersectionObserver((entries) => {
+      entries.forEach((en) => {
+        if (en.isIntersecting) {
+          en.target.classList.add("in-view");
+          _revealObs.unobserve(en.target);
+        }
+      });
+    }, { threshold: 0.06, rootMargin: "0px 0px -24px 0px" });
+  }
+  nodes.forEach((n) => {
+    n.classList.remove("in-view");
+    _revealObs.observe(n);
+  });
+}
+
+function animateKpiInt(sel, target) {
+  const el = $(sel);
+  if (!el) return;
+  const to = Number(target ?? 0);
+  if (!Number.isFinite(to)) { el.textContent = "—"; return; }
+  const prev = Number(el.dataset.val);
+  el.dataset.val = String(to);
+  const reduced = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if (reduced || !Number.isFinite(prev) || prev === to || typeof requestAnimationFrame === "undefined") {
+    el.textContent = fmtInt(to);
+    return;
+  }
+  const start = performance.now();
+  const dur = 480;
+  const tick = (now) => {
+    const t = Math.min(1, (now - start) / dur);
+    const eased = 1 - Math.pow(2, -10 * t);
+    const cur = Math.round(prev + (to - prev) * eased);
+    el.textContent = fmtInt(cur);
+    if (t < 1) requestAnimationFrame(tick);
+    else el.textContent = fmtInt(to);
+  };
+  requestAnimationFrame(tick);
+}
+
+function initAppleMotion() {
+  // 1) 顶部玻璃导航随滚动加深层次
+  const bar = $(".topbar");
+  const onScroll = () => {
+    if (bar) bar.classList.toggle("scrolled", window.scrollY > 10);
+  };
+  window.addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+
+  // 2) 鼠标跟随高光（Apple Bento 卡片镜面质感）
+  document.addEventListener("pointermove", (ev) => {
+    const card = ev.target && ev.target.closest ? ev.target.closest(".spotlight") : null;
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    card.style.setProperty("--mx", `${(ev.clientX - rect.left).toFixed(1)}px`);
+    card.style.setProperty("--my", `${(ev.clientY - rect.top).toFixed(1)}px`);
+  }, { passive: true });
+
+  // 3) 滑动胶囊自适应窗口缩放
+  window.addEventListener("resize", positionTabIndicator, { passive: true });
+  requestAnimationFrame(() => {
+    positionTabIndicator();
+    triggerReveal($("#pane-today") || document);
+  });
+}
+
 function switchTab(tab) {
   state.activeTab = tab;
   $$(".tab-btn").forEach((b) => b.classList.toggle("active", b.dataset.tab === tab));
   $$(".tab-pane").forEach((p) => p.classList.toggle("active", p.id === `pane-${tab}`));
+  positionTabIndicator();
+  const pane = $(`#pane-${tab}`);
+  if (pane) requestAnimationFrame(() => triggerReveal(pane));
   if (tab === "evo") {
     if (!state.loaded.evo) loadEvolution();
     if (!state.loaded.bt) loadBacktest();
@@ -174,10 +269,10 @@ function renderLiveSim(d) {
   const nFilled = d.n_filled_today ?? 0;
   const nHolding = d.n_holding ?? 0;
   const nPairs = d.n_pairs_today ?? 0;
-  $("#kToday").textContent = fmtInt(nToday);
-  $("#kFilled").textContent = fmtInt(nFilled);
-  $("#kHolding").textContent = fmtInt(nHolding);
-  $("#kPairs").textContent = fmtInt(nPairs);
+  animateKpiInt("#kToday", nToday);
+  animateKpiInt("#kFilled", nFilled);
+  animateKpiInt("#kHolding", nHolding);
+  animateKpiInt("#kPairs", nPairs);
 
   const f = d.freshness || {};
   $("#freshSync").innerHTML = `账本同步：<b>${esc(fmtTs(d.generated_at))}</b>${f.market_trading ? " (盘中实时)" : ""}`;
@@ -187,9 +282,11 @@ function renderLiveSim(d) {
   const reason = $("#heroReason");
   if (d.no_orders) {
     title.textContent = "今日不开仓";
-    const why = (Array.isArray(d.notes) && d.notes.length) ? d.notes.join(" ") : "";
-    reason.textContent = why || d.no_orders_reason || "当日无二板委托。";
-    setNotice("#strategyNotice", why || d.no_orders_reason || "");
+    const notes = Array.isArray(d.notes) ? d.notes : [];
+    const primary = notes.find((x) => x.includes("今日实时涨停池") || x.includes("情绪闸门拦截")) || d.no_orders_reason || "当日无二板委托。";
+    reason.textContent = primary;
+    const extra = notes.filter((x) => x !== primary).join(" ｜ ");
+    setNotice("#strategyNotice", extra);
   } else if (nToday > 0) {
     title.textContent = `今日 ${nToday} 张二板排板单`;
     reason.textContent = `已成交 ${nFilled} 张，排队未成 ${d.n_unfilled_today ?? 0} 张，不可判定 ${d.n_unknown_today ?? 0} 张（Q037 撮合）。`;
@@ -218,11 +315,11 @@ function renderLiveSim(d) {
   closeInlineChart();
 
   renderTodayOrders(d.today_orders || [], day);
-  renderPairs(d.pairs, day);
+  renderPairs(d.today_pairs || { pairs: [] }, day, d.pre_seal_radar || []);
   renderPositions(d);
   renderAccount(d);
   renderCost(d);
-  renderEmotion(d.ice, d.emotion);
+  renderEmotion(d.ice, d.emotion, d.overseas);
 
   if (saved) {
     const scope = saved.tableId ? $(`#${saved.tableId}`) : document;
@@ -245,15 +342,18 @@ function renderTodayOrders(rows, day) {
   body.innerHTML = rows.map((o) => {
     const g = o.guitu || {};
     const reason = o.fill_reason || o.state_note || (o.queue_sim && o.queue_sim.detail) || "—";
+    const orderTs = o.entry_frame_ts || o.ordered_at;
+    const orderPx = has(o.entry_price) ? o.entry_price : o.limit_price;
+    const budgetTip = [o.budget_reason, has(o.evo_size_mult) ? `信息素系数 ×${fmtNum(o.evo_size_mult, 2)}` : ""].filter(Boolean).join(" · ");
     return `<tr class="chart-row" data-code="${esc(o.ts_code)}" data-name="${esc(o.name)}" title="点击展开高清 K 线 / 1分钟分时">
       <td><div class="name">${esc(o.name || "—")}</div><div class="code">${esc(o.ts_code || "")}</div></td>
       <td>${esc(o.guitu_theme || o.industry || "—")}</td>
       <td>${roleTag(g.role, g.role_cn)}</td>
       ${buyQualityCell(o)}
-      <td>${esc(fmtTs(o.ordered_at))}</td>
-      <td class="num">${fmtNum(o.limit_price)}</td>
+      <td>${esc(fmtTs(orderTs))}</td>
+      <td class="num">${fmtNum(orderPx)}</td>
       <td class="num">${has(o.qty) ? `${fmtInt(o.qty)}股` : "—"}</td>
-      <td class="num" title="${esc(o.budget_reason || "")}">${has(o.size_budget_yuan) ? fmtInt(o.size_budget_yuan) : "—"}</td>
+      <td class="num" title="${esc(budgetTip)}">${has(o.size_budget_yuan) ? fmtInt(o.size_budget_yuan) : "—"}</td>
       ${valueCell(o)}
       <td>${statusTag(o.status)}</td>
       <td class="muted">${esc(reason)}</td>
@@ -261,26 +361,47 @@ function renderTodayOrders(rows, day) {
   }).join("");
 }
 
-function renderPairs(pairs, day) {
+function renderPairs(pairs, day, radar = []) {
   const wrap = $("#pairsWrap");
   const list = (pairs && pairs.pairs) || [];
+  const cards = [];
   if (!list.length) {
-    wrap.innerHTML = `<div class="pair-card"><h4>龟兔组合</h4><div class="empty-card">${esc(fmtDay(day))} 暂无同题材同身位龟兔配对。</div></div>`;
-    return;
+    cards.push(`<div class="pair-card"><h4>今日龟兔组合</h4><div class="empty-card">${esc(fmtDay(day))} 暂无同题材同身位龟兔配对（不回退展示历史日配对）。</div></div>`);
+  } else {
+    list.forEach((p) => {
+      const rabbits = Array.isArray(p.rabbits) ? p.rabbits : [];
+      const turtles = Array.isArray(p.turtles) ? p.turtles : [];
+      const members = Array.isArray(p.members) ? p.members : [...rabbits, ...turtles];
+      const nRabbit = has(p.n_rabbit) ? p.n_rabbit : rabbits.length;
+      const nTurtle = has(p.n_turtle) ? p.n_turtle : turtles.length;
+      const themeName = p.theme || p.industry || "—";
+      const memberHtml = members.map((m) => `
+        <div class="member">
+          ${roleTag(m.role, m.role_cn)}
+          <span class="who"><b>${esc(m.name || "")}</b> <span class="code">${esc(m.ts_code || "")}</span></span>
+          <span class="why">${esc(m.reason || m.role_reason || "")}</span>
+        </div>`).join("");
+      cards.push(`<div class="pair-card">
+        <h4>${esc(themeName)} · ${esc(p.streak || 2)} 板</h4>
+        <div class="meta">${esc(fmtDay(p.day || day))} · 兔子 ${fmtInt(nRabbit)} · 乌龟 ${fmtInt(nTurtle)}</div>
+        ${memberHtml || '<div class="empty-card">暂无明细</div>'}
+      </div>`);
+    });
   }
-  wrap.innerHTML = list.map((p) => {
-    const members = (p.members || []).map((m) => `
+  if (Array.isArray(radar) && radar.length) {
+    const rHtml = radar.slice(0, 6).map((c) => `
       <div class="member">
-        ${roleTag(m.role, m.role_cn)}
-        <span class="who"><b>${esc(m.name || "")}</b> <span class="code">${esc(m.ts_code || "")}</span></span>
-        <span class="why">${esc(m.role_reason || "")}</span>
+        <span class="tag grade-b">+${fmtNum(c.pct, 2)}%</span>
+        <span class="who"><b>${esc(c.name || "")}</b> <span class="code">${esc(c.ts_code || "")} · ${esc(c.theme || "")}</span></span>
+        <span class="why">距涨停 ${fmtNum(c.gap_to_limit, 2)}%</span>
       </div>`).join("");
-    return `<div class="pair-card">
-      <h4>${esc(p.theme || "—")} · ${esc(p.streak || 2)} 板</h4>
-      <div class="meta">兔子 ${fmtInt(p.n_rabbit)} · 乌龟 ${fmtInt(p.n_turtle)}</div>
-      ${members}
-    </div>`;
-  }).join("");
+    cards.push(`<div class="pair-card">
+      <h4>临封扫板观察（同题材有兔）</h4>
+      <div class="meta">仅真实行情观察，不自动下单 · 命中 ${fmtInt(radar.length)} 只</div>
+      ${rHtml}
+    </div>`);
+  }
+  wrap.innerHTML = cards.join("");
 }
 
 function renderPositions(d) {
@@ -317,14 +438,18 @@ function renderAccount(d) {
   const capWrap = $("#capBarWrap");
   const a = d.account;
   if (!a) { el.innerHTML = ""; capWrap.classList.add("hidden"); return; }
+  const capital = has(a.capital_yuan) ? Number(a.capital_yuan) : (has(d.capital_yuan) ? Number(d.capital_yuan) : 1000000);
+  const equity = has(a.total_amount) ? Number(a.total_amount) : (has(a.equity_yuan) ? Number(a.equity_yuan) : null);
+  const cash = has(a.available) ? Number(a.available) : (has(a.cash_yuan) ? Number(a.cash_yuan) : null);
+  const posVal = has(a.position_amount) ? Number(a.position_amount) : (has(a.position_value_yuan) ? Number(a.position_value_yuan) : null);
   const pnl = a.total_pnl;
-  const ret = a.total_return;
+  const ret = has(a.total_return) ? Number(a.total_return) : (has(pnl) && capital > 0 ? Number(pnl) / capital : null);
   const todayPnl = a.today_pnl;
   const chips = [
-    ["总资金", fmtInt(a.capital_yuan)],
-    ["总资产", fmtInt(a.equity_yuan)],
-    ["可用现金", fmtInt(a.cash_yuan)],
-    ["持仓市值", fmtInt(a.position_value_yuan)],
+    ["初始本金", fmtInt(capital)],
+    ["总资产", fmtInt(equity)],
+    ["可用现金", fmtInt(cash)],
+    ["持仓市值", fmtInt(posVal)],
     ["今日盈亏", has(todayPnl) ? `${todayPnl > 0 ? "+" : ""}${fmtInt(todayPnl)}` : "—", cls(todayPnl)],
     ["累计盈亏", has(pnl) ? `${pnl > 0 ? "+" : ""}${fmtInt(pnl)} (${fmtPct(ret)})` : "—", cls(pnl)],
   ];
@@ -332,13 +457,12 @@ function renderAccount(d) {
     `<div class="summary-chip"><span>${esc(k)}</span><b class="${c || ""}">${esc(v)}</b></div>`
   ).join("");
 
-  const cap = Number(a.capital_yuan || 0);
-  const posVal = Number(a.position_value_yuan || 0);
-  if (cap > 0) {
-    const pct = Math.min(100, (posVal / cap) * 100);
+  const denom = (equity && equity > 0) ? equity : capital;
+  if (denom > 0 && has(posVal)) {
+    const pct = has(a.position_pct) ? Number(a.position_pct) : Math.min(100, (posVal / denom) * 100);
     capWrap.classList.remove("hidden");
-    $("#capBarFill").style.width = `${pct.toFixed(1)}%`;
-    $("#capBarText").textContent = `${pct.toFixed(1)}% (${fmtInt(posVal)} / 上限 ${fmtInt(cap * 0.8)})`;
+    $("#capBarFill").style.width = `${Math.min(100, Math.max(0, pct)).toFixed(1)}%`;
+    $("#capBarText").textContent = `${pct.toFixed(1)}% (${fmtInt(posVal)} / 总仓上限 ${fmtInt(Math.round(denom * 0.8))})`;
   } else {
     capWrap.classList.add("hidden");
   }
@@ -346,12 +470,23 @@ function renderAccount(d) {
 
 function renderCost(d) {
   const s = d.summary || {};
+  const gross = s.gross || {};
+  const byCost = s.by_cost || {};
+  const netStat = (d.cost_label && byCost[d.cost_label]) || Object.values(byCost)[0] || {};
+  const nClosed = has(s.n_trades_closed) ? s.n_trades_closed : (has(s.n_closed) ? s.n_closed : (gross.n ?? 0));
+  const nHolding = has(d.n_holding) ? d.n_holding : (d.account?.n_holding ?? s.n_holding ?? 0);
+  const wrGross = has(gross.win_rate) ? gross.win_rate : s.win_rate_gross;
+  const avgGross = has(gross.gross_mean) ? gross.gross_mean : s.avg_gross;
+  const avgNet = has(netStat.gross_mean) ? netStat.gross_mean : s.avg_net;
+  const medNet = has(netStat.gross_median) ? netStat.gross_median : s.median_net;
+  const wrNet = has(netStat.win_rate) ? netStat.win_rate : s.win_rate_net;
+
   const chips = [
-    ["已结算", fmtInt(s.n_closed)],
-    ["持有中", fmtInt(s.n_holding)],
-    ["胜率(毛)", fmtPct(s.win_rate_gross, 1)],
-    ["均值毛", fmtPct(s.avg_gross), cls(s.avg_gross)],
-    ["均值净(万0.84免五)", fmtPct(s.avg_net), cls(s.avg_net)],
+    ["已结算", fmtInt(nClosed)],
+    ["持有中", fmtInt(nHolding)],
+    ["胜率(毛)", fmtPct(wrGross, 1)],
+    ["均值毛", fmtPct(avgGross), cls(avgGross)],
+    ["均值净(万0.84免五)", fmtPct(avgNet), cls(avgNet)],
     ["单笔上限", `${fmtInt(d.position_size_yuan || 100000)} 元`],
   ];
   $("#costSummary").innerHTML = chips.map(([k, v, c]) =>
@@ -359,33 +494,36 @@ function renderCost(d) {
   ).join("");
 
   const body = $("#costBody");
-  if (!s.n_closed) {
+  if (!nClosed) {
     body.innerHTML = `<tr><td colspan="5" class="empty">尚无已结算交易，结算后自动汇总。</td></tr>`;
     return;
   }
   body.innerHTML = `<tr>
     <td>${esc(d.cost_label || "万0.84免五")}</td>
-    <td class="num">${fmtInt(s.n_closed)}</td>
-    <td class="num">${fmtPct(s.win_rate_net, 1)}</td>
-    <td class="num ${cls(s.avg_net)}">${fmtPct(s.avg_net)}</td>
-    <td class="num ${cls(s.median_net)}">${fmtPct(s.median_net)}</td>
+    <td class="num">${fmtInt(netStat.n ?? nClosed)}</td>
+    <td class="num">${fmtPct(wrNet, 1)}</td>
+    <td class="num ${cls(avgNet)}">${fmtPct(avgNet)}</td>
+    <td class="num ${cls(medNet)}">${fmtPct(medNet)}</td>
   </tr>`;
 }
 
-function renderEmotion(ice, emo) {
+function renderEmotion(ice, emo, ovs) {
   const iceEl = $("#iceBox");
   const emoEl = $("#emotionBox");
+  const ovsEl = $("#overseasBox");
 
   if (!ice || !ice.available) {
     iceEl.innerHTML = `<h4>市场冰点 · 仓位档位</h4><div class="empty-card">${esc((ice && ice.reason) || "市场冰点数据暂不可用")}</div>`;
   } else {
     const isIce = Boolean(ice.is_ice);
-    const lv = ice.severity_level || "—";
+    const lv = ice.level || ice.severity_level || "—";
     const sf = has(ice.size_factor) ? Number(ice.size_factor) : 1;
     const tagCls = isIce ? (lv === "L5" ? "grade-reject" : "unfilled") : "grade-a";
     const tagTxt = isIce ? `${lv} 冰点 · 降仓 ×${sf.toFixed(2)}` : `${lv} 常态 · 满档 ×1.00`;
     const m = ice.metrics || {};
     const dl = ice.dim_levels || {};
+    const refDay = m.day || ice.day || "—";
+    const refSrc = ice.source || (ice.intraday ? `盘中实时行情${ice.as_of ? ` (${ice.as_of})` : ""}` : "真实日线面板");
     const rows = [
       ["下跌占比", has(m.down_share) ? `${(m.down_share * 100).toFixed(1)}%` : "—", dl.down_share || "—"],
       ["跌停家数", has(m.limit_down_n) ? `${fmtInt(m.limit_down_n)} 家` : "—", dl.limit_down_n || "—"],
@@ -396,7 +534,7 @@ function renderEmotion(ice, emo) {
       <div class="status"><span class="tag ${tagCls}">${esc(tagTxt)}</span><span>${esc(ice.verdict || "")}</span></div>
       <table><thead><tr><th>维度</th><th class="num">实测</th><th class="num">分位档</th></tr></thead>
       <tbody>${rows.map(([k, v, l]) => `<tr><td>${esc(k)}</td><td class="num">${esc(v)}</td><td class="num">${esc(l)}</td></tr>`).join("")}</tbody></table>
-      <p class="muted">基准日 ${esc(ice.day || "—")} · 数据源 ${esc(ice.source || "—")}</p>`;
+      <p class="muted">基准日 ${esc(refDay)} · 数据源 ${esc(refSrc)}</p>`;
   }
 
   if (!emo || !emo.available) {
@@ -405,23 +543,214 @@ function renderEmotion(ice, emo) {
     const blocked = Boolean(emo.blocked);
     const tagCls = blocked ? "grade-reject" : "grade-a";
     const tagTxt = blocked ? "闸门拦截 · 今日不开仓" : "闸门通过 · 可做二板";
+    const avgPct = has(emo.avg_ret) ? Number(emo.avg_ret) : (has(emo.avg_pct) ? Number(emo.avg_pct) : null);
+    const prem = has(emo.premium) ? Number(emo.premium) : null;
     const rows = [
       ["昨日≥2板高标数", has(emo.n_high) ? `${fmtInt(emo.n_high)} 只` : "—", ""],
-      ["高标今日均涨", has(emo.avg_pct) ? `${emo.avg_pct > 0 ? "+" : ""}${Number(emo.avg_pct).toFixed(2)}%` : "—", cls(emo.avg_pct)],
+      ["高标今日均涨", avgPct !== null ? `${avgPct > 0 ? "+" : ""}${avgPct.toFixed(2)}%` : "—", cls(avgPct)],
       ["高标跌停占比", has(emo.limit_down_share) ? `${(emo.limit_down_share * 100).toFixed(1)}%` : "—", ""],
+      ["昨日涨停溢价", prem !== null ? `${prem > 0 ? "+" : ""}${prem.toFixed(2)}%${has(emo.n_premium) ? ` (${emo.n_premium}只)` : ""}` : "—", cls(prem)],
     ];
     emoEl.innerHTML = `<h4>个股情绪 · 打板闸门</h4>
-      <div class="status"><span class="tag ${tagCls}">${esc(tagTxt)}</span><span>${esc(emo.reason || "")}</span></div>
+      <div class="status"><span class="tag ${tagCls}">${esc(tagTxt)}</span><span>${esc(emo.verdict || emo.reason || "")}</span></div>
       <table><thead><tr><th>指标</th><th class="num">数值</th></tr></thead>
       <tbody>${rows.map(([k, v, c]) => `<tr><td>${esc(k)}</td><td class="num ${c}">${esc(v)}</td></tr>`).join("")}</tbody></table>`;
   }
+
+  if (ovsEl && ovs && ovs.available) {
+    renderOverseasBox(ovs);
+  }
+}
+
+function renderOverseasBox(ovs) {
+  const ovsEl = $("#overseasBox");
+  if (!ovsEl) return;
+  if (!ovs || !ovs.available) {
+    ovsEl.innerHTML = `<h4>外盘风偏 · 日韩美股 / A50</h4><div class="empty-card">外盘报价暂不可用</div>`;
+    return;
+  }
+  const s = ovs.sentiment || {};
+  const lv = s.risk_level || "neutral";
+  const tagCls = lv === "risk_off" ? "grade-reject" : lv === "caution" ? "unfilled" : "grade-a";
+  const mult = has(s.size_mult) ? Number(s.size_mult) : 1.0;
+  const scStr = has(s.score) ? `${Number(s.score) > 0 ? "+" : ""}${Number(s.score).toFixed(1)}` : "—";
+  const pickKeys = new Set(["KOSPI", "N225", "A50", "IXIC", "SOX", "HSI"]);
+  const rows = (ovs.indices || []).filter((x) => pickKeys.has(x.key)).map((x) => {
+    const p = has(x.pct) ? `${Number(x.pct) > 0 ? "+" : ""}${Number(x.pct).toFixed(2)}%` : "—";
+    return `<tr><td>${esc(x.name)} <span class="code">${esc(x.region)}</span></td><td class="num ${cls(x.pct)}"><b>${esc(p)}</b></td></tr>`;
+  }).join("");
+  ovsEl.innerHTML = `<h4>外盘风偏 · 日韩美股 / A50</h4>
+    <div class="status"><span class="tag ${tagCls}">${esc(s.risk_label || "外盘中性")} ×${mult.toFixed(2)}</span><span>情绪分 <b>${esc(scStr)}</b></span></div>
+    <table><thead><tr><th>全球核心指数</th><th class="num">涨跌幅</th></tr></thead><tbody>${rows}</tbody></table>
+    <p class="muted">${esc((s.reasons || []).join(" · ") || ovs.source || "")}</p>`;
+}
+
+function stockPillHtml(s, extraCls = "") {
+  const code = s.ts_code || s.code || "";
+  const name = s.name || code;
+  const badge = s.high_days ? `<small>${esc(s.high_days)}</small>` : "";
+  const tip = s.reason ? `${name} (${code}) · ${s.reason}` : `${name} (${code}) · 点击查看K线/分时`;
+  return `<button type="button" class="stock-pill ${extraCls}" data-code="${esc(code)}" data-name="${esc(name)}" title="${esc(tip)}">${esc(name)} <span class="code">${esc(code)}</span>${badge}</button>`;
+}
+
+function renderCatalystBox(d) {
+  const catEl = $("#catalystBox");
+  if (!catEl || !d) return;
+  const ovs = d.overseas || {};
+  const ns = d.news || {};
+  const usCats = (ovs.catalysts || []).filter((c) => c.leaders && c.leaders.length);
+  const cnCats = (ns.theme_catalysts || []).slice(0, 7);
+  const isUs = state.catTab !== "cn";
+
+  const bodyHtml = isUs
+    ? `<table><thead><tr><th>映射 A 股板块 / 美股龙头 / 对应 A 股</th><th class="num">均涨</th><th>方向</th></tr></thead>
+      <tbody>${usCats.length ? usCats.map((c) => {
+        const dirCls = c.direction === "bullish" ? "grade-a" : c.direction === "bearish" ? "grade-reject" : "grade-c";
+        const dirTxt = c.direction === "bullish" ? "美股催化" : c.direction === "bearish" ? "美股承压" : "平稳";
+        const pills = (c.leaders || []).slice(0, 4).map((l) =>
+          `<span class="leader-pill ${cls(l.pct)}">${esc(l.name)} ${l.pct > 0 ? "+" : ""}${Number(l.pct).toFixed(1)}%</span>`
+        ).join("");
+        const aStocks = (c.mapped_stocks || []).slice(0, 4).map((s) => stockPillHtml(s)).join("");
+        return `<tr>
+          <td>
+            <b>${esc(c.theme)}</b>
+            <div class="leader-pills">${pills}</div>
+            ${aStocks ? `<div class="stock-pills">${aStocks}</div>` : ""}
+          </td>
+          <td class="num ${cls(c.avg_pct)}"><b>${c.avg_pct > 0 ? "+" : ""}${Number(c.avg_pct).toFixed(2)}%</b></td>
+          <td><span class="tag ${dirCls}">${dirTxt}</span></td>
+        </tr>`;
+      }).join("") : '<tr><td colspan="3" class="empty">暂无美股龙头报价</td></tr>'}</tbody></table>`
+    : `<table><thead><tr><th>A 股题材轴 / 政策要点 / 对应 A 股</th><th class="num">计数</th><th>极性</th></tr></thead>
+      <tbody>${cnCats.length ? cnCats.map((c) => {
+        const dirCls = c.direction === "bullish" ? "grade-a" : (c.direction === "danger" || c.direction === "bearish") ? "grade-reject" : "grade-c";
+        const dirTxt = c.direction === "bullish" ? `利好 +${c.score}` : c.direction === "danger" ? `雷区 ${c.score}` : c.direction === "bearish" ? `承压 ${c.score}` : `中性`;
+        const topH = (c.headlines && c.headlines[0]) ? c.headlines[0].title : "";
+        const aStocks = (c.mapped_stocks || []).slice(0, 4).map((s) => stockPillHtml(s)).join("");
+        return `<tr>
+          <td>
+            <b>${esc(c.theme)}</b>
+            <div class="code">${esc(topH.slice(0, 42))}</div>
+            ${aStocks ? `<div class="stock-pills">${aStocks}</div>` : ""}
+          </td>
+          <td class="num">好${c.pos_n}/空${c.neg_n}</td>
+          <td><span class="tag ${dirCls}">${dirTxt}</span></td>
+        </tr>`;
+      }).join("") : '<tr><td colspan="3" class="empty">暂未命中特定题材快讯</td></tr>'}</tbody></table>`;
+
+  catEl.innerHTML = `<div class="card-head-row">
+      <h4>板块催化与对应 A 股</h4>
+      <div class="sub-seg">
+        <button type="button" class="sub-seg-btn ${isUs ? "active" : ""}" data-cat="us">美股映射 (${usCats.length})</button>
+        <button type="button" class="sub-seg-btn ${!isUs ? "active" : ""}" data-cat="cn">国内政策 (${cnCats.length})</button>
+      </div>
+    </div>${bodyHtml}`;
+}
+
+function renderMacroIntel(d) {
+  if (!d) return;
+  state.lastMacroData = d;
+  const ovs = d.overseas || {};
+  const ns = d.news || {};
+  if (ovs.available) renderOverseasBox(ovs);
+
+  const meta = $("#macroMeta");
+  if (meta) {
+    meta.textContent = `外盘 ${ovs.n_indices || 0} 指数 · 快讯 ${ns.n_total || 0} 条（利好 ${ns.n_positive || 0} / 雷区 ${ns.n_danger || 0} / 直接命中个股 ${(ns.direct_stocks || []).length} 只）· 点击任意 A 股胶囊看盘 · 更新 ${fmtTs(d.generated_at)}`;
+  }
+
+  // 左：美股映射 / 国内政策题材切换卡片（左右等高更整洁）
+  renderCatalystBox(d);
+
+  // 右：7×24 高信噪比快讯与直接命中个股/雷区预警
+  const newsEl = $("#newsBox");
+  if (newsEl) {
+    const watch = d.watch_alerts || [];
+    const watchBanner = watch.length ? watch.map((w) =>
+      `<div class="status"><span class="tag ${w.risk_level === "danger" ? "grade-reject" : "grade-a"}">${esc(w.scope)} · ${esc(w.name)} (${esc(w.ts_code)})</span><span>${esc((w.headlines && w.headlines[0] && w.headlines[0].title) || "")}</span></div>`
+    ).join("") : "";
+
+    const direct = (ns.direct_stocks || []).slice(0, 10);
+    const directBar = direct.length ? `<div class="stock-pills" style="margin-bottom:10px">${direct.map((s) => {
+      const ec = s.risk_level === "danger" ? "danger" : s.risk_level === "positive" ? "positive" : "";
+      const tag = s.risk_level === "danger" ? `⚠ ${(s.danger_tags || []).join("/")}` : s.risk_level === "positive" ? "利好" : "公告";
+      return stockPillHtml({ ts_code: s.ts_code, name: s.name || s.ts_code, high_days: tag, reason: (s.headlines && s.headlines[0]?.title) || "" }, ec);
+    }).join("")}</div>` : "";
+
+    const items = (ns.highlights || []).slice(0, 14);
+    const listHtml = items.length ? `<div class="news-list">${items.map((it) => {
+      const sentCls = it.sentiment === "danger" ? "grade-reject" : it.sentiment === "positive" ? "grade-a" : it.sentiment === "negative" ? "unfilled" : "grade-c";
+      const sentLbl = it.sentiment === "danger" ? "⚠ 雷区" : it.sentiment === "positive" ? "利好" : it.sentiment === "negative" ? "偏空" : "快讯";
+      const thTags = (it.themes || []).map((t) => `<span class="tag grade-b">${esc(t)}</span>`).join("");
+      const directSt = (it.stocks || []).slice(0, 3).map((s) => stockPillHtml(s, it.sentiment === "danger" ? "danger" : "")).join("");
+      const themeSt = !directSt ? (it.theme_stocks || []).slice(0, 3).map((s) => stockPillHtml(s)).join("") : "";
+      return `<div class="news-item ${it.sentiment === "danger" ? "danger" : ""}">
+        <div class="news-top">
+          <span class="tag ${sentCls}">${sentLbl}</span>
+          <span class="code">${esc(fmtTs(it.published_at))} · ${esc(it.source || "")}</span>
+          ${thTags}
+        </div>
+        <div class="news-title">${esc(it.title)}</div>
+        ${(directSt || themeSt) ? `<div class="stock-pills">${directSt || themeSt}</div>` : ""}
+      </div>`;
+    }).join("")}</div>` : `<div class="empty-card">暂无实时快讯</div>`;
+    newsEl.innerHTML = `<h4>7×24 快讯 · 命中个股与雷区预警</h4>${watchBanner}${directBar}${listHtml}`;
+  }
+}
+
+function openMacroStockChart(code, name) {
+  const host = $("#macroIntel");
+  if (!host) return;
+  closeInlineChart();
+  const old = $("#macroChartBox");
+  if (old && old.dataset.code === code) { old.remove(); return; }
+  if (old) old.remove();
+
+  const box = document.createElement("div");
+  box.id = "macroChartBox";
+  box.className = "macro-chart-box";
+  box.dataset.code = code;
+  box.innerHTML = `<div class="chart-inline">
+    <div class="chart-inline-head">
+      <b>${esc(name || code)} (${esc(code)}) · 映射个股实时看盘</b>
+      <div class="chart-tabs">
+        <button type="button" class="chart-tab active" data-tab="kline">日K线 + 买卖点</button>
+        <button type="button" class="chart-tab" data-tab="intraday">1分钟分时 + VWAP</button>
+      </div>
+      <button type="button" class="chart-close">收起 ✕</button>
+    </div>
+    <div class="chart-inline-meta muted">单股实时快查中…</div>
+    <div class="chart-stage">
+      <canvas class="chart-canvas"></canvas>
+      <div class="chart-tip hidden"></div>
+    </div>
+  </div>`;
+  host.appendChild(box);
+  inlineChart.code = code;
+  inlineChart.name = name || code;
+  inlineChart.tab = "kline";
+  inlineChart.detailEl = box;
+
+  box.querySelector(".chart-close").addEventListener("click", () => closeInlineChart());
+  box.querySelectorAll(".chart-tab").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      inlineChart.tab = btn.dataset.tab;
+      box.querySelectorAll(".chart-tab").forEach((b) => b.classList.toggle("active", b === btn));
+      drawInlineChart();
+    });
+  });
+  fetchAndDrawChart();
+  inlineChart.timer = setInterval(() => {
+    if (!document.hidden) fetchAndDrawChart();
+  }, state.marketTrading ? 12000 : 60000);
+  box.scrollIntoView({ behavior: "smooth", block: "nearest" });
 }
 
 /* ------------------------------------------- HiDPI Interactive Chart */
 const inlineChart = { code: null, name: null, tab: "kline", data: null, timer: null, rowEl: null, detailEl: null, tableId: null };
-const UP_COLOR = "#f25c5c";
-const DOWN_COLOR = "#2ec27e";
-const VWAP_COLOR = "#f59e0b";
+const UP_COLOR = "#ff453a";
+const DOWN_COLOR = "#30d158";
+const VWAP_COLOR = "#ffd60a";
 
 function closeInlineChart() {
   if (inlineChart.timer) { clearInterval(inlineChart.timer); inlineChart.timer = null; }
@@ -817,28 +1146,46 @@ function renderBacktest(g) {
     $("#btStats").innerHTML = `<tr><td colspan="6" class="empty">无历史回放数据</td></tr>`;
     return;
   }
-  const s = sim.summary || {};
-  $("#btMeta").textContent = `区间 ${sim.period || "—"} · ${sim.cost_label || "万0.84免五"} · 生成 ${sim.generated_at || "—"}`;
-  const rows = [
-    ["主口径（含交易成本）", s.n, s.win_rate, s.avg_net, s.median_net, s.compound_10pct_net],
-    ["毛收益对照（不含成本）", s.n, s.win_rate_gross, s.avg_gross, s.median_gross, s.compound_10pct_gross],
-  ];
-  $("#btStats").innerHTML = rows.map(([name, n, wr, avg, med, comp]) => `<tr>
-    <td>${esc(name)}</td><td class="num">${fmtInt(n)}</td><td class="num">${fmtPct(wr, 1)}</td>
-    <td class="num ${cls(avg)}">${fmtPct(avg)}</td><td class="num ${cls(med)}">${fmtPct(med)}</td>
-    <td class="num ${cls(comp)}">${fmtPct(comp)}</td>
-  </tr>`).join("");
+  const period = sim.period || (sim.panel_last ? `截至 ${sim.panel_last}` : "—");
+  const costMain = has(sim.cost_main) ? Number(sim.cost_main) : 0.003688;
+  $("#btMeta").textContent = `区间 ${period} · ${sim.cost_label || "万0.84免五"} · 生成 ${sim.generated_at || "—"}`;
+
+  const statsMap = sim.stats || {};
+  const entries = Object.entries(statsMap)
+    .filter(([, st]) => st && typeof st === "object")
+    .sort(([a], [b]) => {
+      const rank = (k) => k.includes("主口径") ? 0 : k.includes("毛收益") ? 1 : 2;
+      return rank(a) - rank(b);
+    });
+  if (entries.length) {
+    $("#btStats").innerHTML = entries.map(([name, st]) => `<tr>
+      <td>${esc(name)}</td>
+      <td class="num">${fmtInt(st.n)}</td>
+      <td class="num">${fmtPct(st.win, 1)}</td>
+      <td class="num ${cls(st.mean_net)}">${fmtPct(st.mean_net)}</td>
+      <td class="num ${cls(st.median_net)}">${fmtPct(st.median_net)}</td>
+      <td class="num ${cls(st.cum_10pct)}">${fmtPct(st.cum_10pct)}</td>
+    </tr>`).join("");
+  } else {
+    $("#btStats").innerHTML = `<tr><td colspan="6" class="empty">无回放统计项</td></tr>`;
+  }
 
   const latest = (sim.latest || []).slice(0, 20);
-  $("#btLatest").innerHTML = latest.length ? latest.map((x) => `<tr>
-    <td>${esc(x.entry_date || "—")}</td>
-    <td><div class="name">${esc(x.name || "—")}</div><div class="code">${esc(x.ts_code || "")}</div></td>
-    <td>${esc(x.theme || x.industry || "—")}</td>
-    <td class="num">${fmtInt(x.entry_streak)}</td>
-    <td class="num">${fmtInt(x.hold_days)}天</td>
-    <td class="num">${fmtInt(x.max_streak)}</td>
-    <td class="num ${cls(x.net_return)}">${fmtPct(x.net_return)}</td>
-  </tr>`).join("") : `<tr><td colspan="7" class="empty">无近期信号</td></tr>`;
+  $("#btLatest").innerHTML = latest.length ? latest.map((x) => {
+    const dt = x.signal_date || x.entry_date || "—";
+    const hold = has(x.hold) ? x.hold : x.hold_days;
+    const netRet = has(x.net_return) ? Number(x.net_return) : (has(x.a) ? Number(x.a) - costMain : null);
+    const themeLabel = x.theme || x.industry || (x.has_rabbit ? "同日有兔" : "同日无兔");
+    return `<tr>
+      <td>${esc(dt)}</td>
+      <td><div class="name">${esc(x.name || "—")}</div><div class="code">${esc(x.ts_code || "")}</div></td>
+      <td>${esc(themeLabel)}</td>
+      <td class="num">${fmtInt(has(x.entry_streak) ? x.entry_streak : 2)}</td>
+      <td class="num">${has(hold) ? `${fmtInt(hold)}天` : "—"}</td>
+      <td class="num">${fmtInt(x.max_streak)}</td>
+      <td class="num ${cls(netRet)}">${fmtPct(netRet)}</td>
+    </tr>`;
+  }).join("") : `<tr><td colspan="7" class="empty">无近期信号</td></tr>`;
 
   $("#btCaveats").innerHTML = (sim.caveats || []).map((c) => `<li>${esc(c)}</li>`).join("");
 }
@@ -850,27 +1197,69 @@ function renderExitAlternatives(d) {
     return;
   }
   const s = d.summary || {};
+  const curM = s.current ? s.current.mean : s.avg_actual;
+  const slM = s.stoploss ? s.stoploss.mean : s.avg_fixed;
+  const deltaPp = has(s.delta_mean_pp) ? s.delta_mean_pp : s.delta_pp;
+  const nTotal = has(d.n) ? d.n : (s.current?.n ?? s.n ?? 0);
   $("#exitAltMeta").textContent =
-    `n=${fmtInt(s.n)} · 现行均值 ${fmtPct(s.avg_actual)} vs 固定止损均值 ${fmtPct(s.avg_fixed)} · 改善 ${has(s.delta_pp) ? `${s.delta_pp > 0 ? "+" : ""}${Number(s.delta_pp).toFixed(2)}pp` : "—"}`;
+    `n=${fmtInt(nTotal)} · 现行均值 ${fmtPct(curM)} vs 固定止损均值 ${fmtPct(slM)} · 差异 ${has(deltaPp) ? `${deltaPp > 0 ? "+" : ""}${Number(deltaPp).toFixed(2)}pp` : "—"}`;
+
   const rows = d.trades || [];
   $("#exitAltBody").innerHTML = rows.length ? rows.map((t) => {
-    const diff = has(t.diff_pp) ? `${t.diff_pp > 0 ? "+" : ""}${Number(t.diff_pp).toFixed(2)}pp` : "—";
+    const code = t.code || t.ts_code || "";
+    const curR = has(t.current_return) ? t.current_return : t.actual_gross;
+    const slR = has(t.stoploss_return) ? t.stoploss_return : t.fixed_gross;
+    const diffVal = has(t.delta_pp) ? t.delta_pp : t.diff_pp;
+    const diff = has(diffVal) ? `${diffVal > 0 ? "+" : ""}${Number(diffVal).toFixed(2)}pp` : "—";
+    const ctx = t.context || {};
+    const envParts = [];
+    if (ctx.gate_blocked === true) envParts.push("闸门拦截");
+    else if (ctx.gate_blocked === false) envParts.push("闸门通过");
+    if (has(ctx.high_avg_ret)) envParts.push(`高标${ctx.high_avg_ret > 0 ? "+" : ""}${Number(ctx.high_avg_ret).toFixed(2)}%`);
+    if (ctx.break_is_limit_down === true) envParts.push("断板跌停");
+    else if (ctx.break_is_limit_down === false) envParts.push("断板未跌停");
+    const envSummary = t.env_summary || envParts.join(" · ") || "—";
+    const note = t.stoploss_note || t.fixed_reason || "—";
+    const noteFull = t.stoploss_exit_date ? `${t.stoploss_exit_date} ${note}` : note;
     return `<tr>
-      <td><div class="name">${esc(t.name || "—")}</div><div class="code">${esc(t.ts_code || "")}</div></td>
-      <td class="num ${cls(t.actual_gross)}">${fmtPct(t.actual_gross)}</td>
-      <td class="num ${cls(t.fixed_gross)}">${fmtPct(t.fixed_gross)}</td>
-      <td class="num ${cls(t.diff_pp)}">${diff}</td>
-      <td class="code">${esc(t.env_summary || "—")}</td>
-      <td class="muted">${esc(t.fixed_reason || "—")}</td>
+      <td><div class="name">${esc(t.name || "—")}</div><div class="code">${esc(code)}</div></td>
+      <td class="num ${cls(curR)}">${fmtPct(curR)}</td>
+      <td class="num ${cls(slR)}">${fmtPct(slR)}</td>
+      <td class="num ${cls(diffVal)}">${diff}</td>
+      <td class="code">${esc(envSummary)}</td>
+      <td class="muted">${esc(noteFull)}</td>
     </tr>`;
   }).join("") : `<tr><td colspan="6" class="empty">尚无已结算交易</td></tr>`;
 
-  const groups = d.by_env || {};
-  $("#exitEnvGroups").innerHTML = Object.entries(groups).map(([title, items]) => `
+  const dimLabel = {
+    break_limit_down: "按断板是否跌停",
+    gate: "按买入日情绪闸门",
+    high_avg_ret: "按买入日高标均涨",
+    high_limit_down_share: "按买入日高标跌停占比",
+  };
+  const grouped = {};
+  if (Array.isArray(d.by_env)) {
+    d.by_env.forEach((item) => {
+      const k = dimLabel[item.dimension] || item.dimension || "环境分组";
+      if (!grouped[k]) grouped[k] = [];
+      grouped[k].push({
+        bucket: item.bucket,
+        n: item.n,
+        avg_actual: item.current?.mean,
+        avg_fixed: item.stoploss?.mean,
+        delta_pp: item.delta_mean_pp,
+      });
+    });
+  } else if (d.by_env && typeof d.by_env === "object") {
+    Object.entries(d.by_env).forEach(([k, v]) => {
+      if (Array.isArray(v)) grouped[k] = v;
+    });
+  }
+  $("#exitEnvGroups").innerHTML = Object.entries(grouped).map(([title, items]) => `
     <div class="env-group">
       <h4>${esc(title)}</h4>
       <table><thead><tr><th>分组</th><th class="num">n</th><th class="num">现行</th><th class="num">止损</th><th class="num">差</th></tr></thead>
-      <tbody>${(items || []).map((x) => `<tr>
+      <tbody>${items.map((x) => `<tr>
         <td>${esc(x.bucket)}</td><td class="num">${fmtInt(x.n)}</td>
         <td class="num ${cls(x.avg_actual)}">${fmtPct(x.avg_actual)}</td>
         <td class="num ${cls(x.avg_fixed)}">${fmtPct(x.avg_fixed)}</td>
@@ -906,6 +1295,20 @@ async function loadLiveSim() {
     $("#heroReason").textContent = String(e.message || e);
   } finally {
     state.inFlight.live = false;
+  }
+}
+
+async function loadMacroIntel() {
+  if (state.inFlight.macro) return;
+  state.inFlight.macro = true;
+  try {
+    const d = await getJSON("/api/macro-intel", 25000);
+    renderMacroIntel(d);
+  } catch (e) {
+    const meta = $("#macroMeta");
+    if (meta) meta.textContent = `外盘/快讯加载失败：${e.message || e}`;
+  } finally {
+    state.inFlight.macro = false;
   }
 }
 
@@ -966,6 +1369,10 @@ function connectSSE() {
       try {
         const brief = JSON.parse(ev.data);
         if (brief.error) return;
+        if (brief.build) {
+          if (state.serverBuild === null) state.serverBuild = brief.build;
+          else if (state.serverBuild !== brief.build) { window.location.reload(); return; }
+        }
         state.marketTrading = Boolean(brief.trading);
         setPill("#ssePill", brief.trading ? `盘中实时 ${fmtTs(brief.server_time)}` : `在线 ${fmtTs(brief.server_time)}`, "ok");
         if (brief.generated_at && brief.generated_at !== state.lastGeneratedAt) {
@@ -998,6 +1405,20 @@ function bindEvents() {
   };
   $("#todayBody").addEventListener("click", onRowClick);
   $("#posBody").addEventListener("click", onRowClick);
+  const macroEl = $("#macroIntel");
+  if (macroEl) {
+    macroEl.addEventListener("click", (e) => {
+      const seg = e.target.closest("button.sub-seg-btn");
+      if (seg && seg.dataset.cat) {
+        state.catTab = seg.dataset.cat;
+        if (state.lastMacroData) renderCatalystBox(state.lastMacroData);
+        return;
+      }
+      const btn = e.target.closest("button.stock-pill");
+      if (!btn || !btn.dataset.code) return;
+      openMacroStockChart(btn.dataset.code, btn.dataset.name);
+    });
+  }
 
   $("#exitAltDetails").addEventListener("toggle", (e) => {
     if (e.target.open && !state.loaded.exitAlt) loadExitAlternatives();
@@ -1009,7 +1430,7 @@ function bindEvents() {
     try {
       await fetch("/api/refresh", { method: "POST" });
       state.loaded = { evo: false, bt: false, exitAlt: false };
-      await Promise.all([loadHealth(), loadLiveSim()]);
+      await Promise.all([loadHealth(), loadLiveSim(), loadMacroIntel()]);
       if (state.activeTab === "evo") { loadEvolution(); loadBacktest(); }
       if ($("#exitAltDetails").open) loadExitAlternatives();
     } finally {
@@ -1023,13 +1444,16 @@ function bindEvents() {
 }
 
 bindEvents();
-// 首屏只并发两个轻快核心接口，互不阻塞，毫秒级呈现
+initAppleMotion();
+// 首屏并发核心轻快接口，互不阻塞
 loadHealth();
 loadLiveSim();
+loadMacroIntel();
 connectSSE();
 // 兜底轮询（仅前台激活时执行；SSE 正常时作为冗余保护）
 setInterval(() => {
   if (document.hidden) return;
   loadHealth();
   loadLiveSim();
+  loadMacroIntel();
 }, 45000);

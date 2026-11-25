@@ -39,7 +39,7 @@ from flask import Flask, Response, jsonify, request, send_from_directory
 from backend import (buy_signals, charts, data_health, evolution,
                      exit_alternatives, feeds, guitu_backtest, guitu_cases,
                      ice_samples, leader_ladder, live_sim, market_clock,
-                     minute_flow, queue_match, recorder)
+                     minute_flow, news_feed, overseas, queue_match, recorder)
 from backend import paths
 from backend.json_safe import sanitize
 
@@ -115,6 +115,11 @@ def clear_cache() -> None:
     except Exception:  # noqa: BLE001
         pass
     try:
+        overseas.clear_cache()
+        news_feed.clear_cache()
+    except Exception:  # noqa: BLE001
+        pass
+    try:
         from backend import fill_verify
         if hasattr(fill_verify, "_AMT_CACHE"):
             fill_verify._AMT_CACHE.clear()
@@ -148,7 +153,9 @@ def _serve_index() -> Response:
         html = (WEB / "index.html").read_text(encoding="utf-8")
         ver = int(BUILD)
         html = html.replace("__APP_VER__", str(ver))
-        return Response(html, mimetype="text/html; charset=utf-8")
+        resp = Response(html, mimetype="text/html; charset=utf-8")
+        resp.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        return resp
     except OSError:
         return Response("web/index.html 缺失", status=500, mimetype="text/plain; charset=utf-8")
 
@@ -182,8 +189,9 @@ def api_version() -> Response:
 def api_health() -> Response:
     def _run() -> dict[str, Any]:
         panel = DATA / "panel_raw.parquet"
-        last = None
-        rows = None
+        panel_live = paths.panel_live_file()
+        raw_last = None
+        raw_rows = 0
         if panel.is_file():
             try:
                 lf = pl.scan_parquet(panel).select(
@@ -191,10 +199,30 @@ def api_health() -> Response:
                     pl.len().alias("n"),
                 )
                 got = lf.collect().to_dicts()[0]
-                last = str(got.get("last"))
-                rows = int(got.get("n") or 0)
+                raw_last = str(got.get("last"))
+                raw_rows = int(got.get("n") or 0)
             except Exception as exc:  # noqa: BLE001
-                last = f"读取失败: {type(exc).__name__}"
+                raw_last = f"读取失败: {type(exc).__name__}"
+        live_last = None
+        live_rows = 0
+        if panel_live.is_file():
+            try:
+                lf2 = pl.scan_parquet(panel_live).select(
+                    pl.col("trade_date").max().alias("last"),
+                    pl.len().alias("n"),
+                )
+                got2 = lf2.collect().to_dicts()[0]
+                live_last = str(got2.get("last"))
+                live_rows = int(got2.get("n") or 0)
+            except Exception:  # noqa: BLE001
+                live_last = None
+        valid_dates = [d for d in (raw_last, live_last) if d and not d.startswith("读取失败")]
+        last = max(valid_dates) if valid_dates else raw_last
+        rows = raw_rows + live_rows
+        newest_mtime = max(
+            [p.stat().st_mtime for p in (panel, panel_live) if p.is_file()],
+            default=None,
+        )
         live_days = sorted(p.name for p in (DATA / "live").iterdir()
                            if p.is_dir() and p.name.isdigit()) if (DATA / "live").is_dir() else []
         rec = recorder.status()
@@ -206,9 +234,11 @@ def api_health() -> Response:
                 "file": str(panel),
                 "exists": panel.is_file(),
                 "last_trade_date": last,
+                "raw_last_trade_date": raw_last,
+                "live_last_trade_date": live_last,
                 "rows": rows,
-                "mtime": (datetime.fromtimestamp(panel.stat().st_mtime)
-                          .isoformat(timespec="seconds") if panel.is_file() else None),
+                "mtime": (datetime.fromtimestamp(newest_mtime)
+                          .isoformat(timespec="seconds") if newest_mtime else None),
             },
             "live_archive": {"days": len(live_days), "latest": live_days[-1] if live_days else None},
             "archive_check": data_health.check(),
@@ -217,36 +247,99 @@ def api_health() -> Response:
             "paths": paths.describe(),
             "data_policy": "只读真实落盘：涨停池留档 + 真实日线；不合成、不插值、不补数。",
         }
-    return api_guard(_run)
+    return api_guard(lambda: cached_copy("health", 15.0, _run))
 
 
 # ---------------------------------------------------------------------------
 # 悟空真经三个数据出口
 # ---------------------------------------------------------------------------
+def _scan_today_pre_seal(day: str) -> list[dict[str, Any]]:
+    """只读执行临封扫板雷达：当日存在一字兔时，扫描同题材强势冲板未封标的（绝不造数）。"""
+    try:
+        frames = live_sim.read_frames(day)
+        if not frames:
+            return []
+        allzt = live_sim.collect_all_zt(frames)
+        rabbits = {c for c, g in allzt.items() if live_sim.is_rabbit(g)}
+        if not rabbits:
+            return []
+        tags = live_sim._theme_tags(day)
+        if not tags:
+            return []
+        theme_rabbits: dict[str, list[str]] = {}
+        theme_members: dict[str, list[str]] = {}
+        for c, tlist in tags.items():
+            for th in tlist:
+                theme_members.setdefault(th, []).append(c)
+                if c in rabbits:
+                    theme_rabbits.setdefault(th, []).append(c)
+        if not theme_rabbits:
+            return []
+        from backend import archive
+        qdf = archive.latest_frame(day, "quotes")
+        if qdf is None or qdf.height == 0:
+            return []
+        quotes_map = {
+            str(r.get("ts_code") or "").zfill(6): r
+            for r in qdf.iter_rows(named=True)
+            if r.get("ts_code")
+        }
+        return buy_signals.scan_pre_seal_candidates(
+            theme_rabbits, theme_members, quotes_map,
+            already_sealed=set(allzt.keys()),
+        )[:15]
+    except Exception:  # noqa: BLE001
+        return []
+
+
 def _live_sim_enriched() -> dict[str, Any]:
-    """执行 live_sim.sync() 并无损附加买点质量评分与新鲜度元数据（不改账本）。"""
+    """执行 live_sim.sync() 并无损附加买点质量评分、临封雷达与新鲜度元数据（不改账本）。"""
     d = live_sim.sync()
     if isinstance(d, dict):
-        # 为今日委托只读附加买点质量分级（A/B/C/REJECT + 撤单预警）
+        # 合并外盘与国内快讯催化/雷区（只读缓存，绝不拖慢接口）
+        ovs = d.get("overseas") or {}
+        cat_scores: dict[str, float] = {}
+        for th, ci in (ovs.get("catalyst_by_theme") or {}).items():
+            cat_scores[th] = cat_scores.get(th, 0.0) + float(ci.get("catalyst_score") or 0.0)
+        stock_alerts: dict[str, dict[str, Any]] = {}
+        try:
+            ns = news_feed.snapshot(day=str(d.get("day") or ""))
+            if ns.get("available"):
+                stock_alerts = ns.get("stock_alerts") or {}
+                for th, ni in (ns.get("catalyst_by_theme") or {}).items():
+                    cat_scores[th] = cat_scores.get(th, 0.0) + max(-2.0, min(2.0, float(ni.get("score") or 0.0)))
+        except Exception:  # noqa: BLE001
+            pass
+
+        # 为今日委托只读附加买点质量分级（A/B/C/REJECT + 撤单预警 + 外盘/快讯催化）
         orders = d.get("today_orders") or []
         for o in orders:
             if not isinstance(o, dict):
                 continue
             rabbits = o.get("guitu_rabbits") or []
             qsim = o.get("queue_sim") or {}
+            # 仅对未成交且未开板的排队单比较封单失血；已成交单队列归零是吃穿成交，绝非失血撤单
+            is_unfilled_intact = (o.get("status") != "filled" and not (qsim.get("rounds") or []))
+            cur_seal = qsim.get("queue_left_yi") if is_unfilled_intact else None
+            theme = str(o.get("guitu_theme") or o.get("industry") or "")
+            code6 = str(o.get("ts_code") or "").zfill(6)
             o["buy_quality"] = buy_signals.evaluate_turtle_quality(
                 o,
                 rabbit_count=len(rabbits) if isinstance(rabbits, list) else 1,
                 peak_seal_yi=qsim.get("seal_fund_at_entry_yi"),
-                current_seal_yi=qsim.get("queue_left_yi"),
+                current_seal_yi=cur_seal,
+                catalyst_score=cat_scores.get(theme),
+                news_alert=stock_alerts.get(code6),
+                rabbit_seal_yi=o.get("rabbit_max_seal_yi"),
             )
+        d["pre_seal_radar"] = _scan_today_pre_seal(str(d.get("day") or ""))
         mkt = market_clock.trading_state("CN")
         d["freshness"] = {
             "server_time": datetime.now().isoformat(timespec="seconds"),
             "generated_at": d.get("generated_at"),
             "market_trading": bool(mkt.get("trading")),
             "market_reason": mkt.get("reason") or "",
-            "price_source": "腾讯实时行情 + 新浪热备 / 东财 Push2 1分钟分时",
+            "price_source": "腾讯/新浪实时行情 · 日韩美股外盘 · 7×24政策快讯",
             "cache_ttl_sec": 15 if mkt.get("trading") else 60,
         }
     return d
@@ -269,6 +362,50 @@ def api_live_sim() -> Response:
 def api_evolution() -> Response:
     """蚁群信息素路径权重 + 非对称奖惩反馈 + 影子账本对照（只读，不改生产账本）。"""
     return api_guard(lambda: cached_copy("evolution", 60.0, evolution.snapshot))
+
+
+@app.get("/api/macro-intel")
+def api_macro_intel() -> Response:
+    """外盘指数风偏（日经/韩国KOSPI/美股/A50）、美股板块映射与国内7×24政策快讯。"""
+    def _run() -> dict[str, Any]:
+        ovs = overseas.snapshot()
+        ns = news_feed.snapshot()
+        # 给美股板块映射也挂上当日真实 A 股活跃对应股（来自 theme_pool 连板/涨停/炸板三池）
+        tmap = ns.get("theme_stock_map") or news_feed.build_theme_stock_map()
+        if isinstance(ovs, dict) and ovs.get("catalysts"):
+            ovs = copy.deepcopy(ovs)
+            for c in ovs["catalysts"]:
+                c["mapped_stocks"] = tmap.get(c.get("theme"), [])[:5]
+        # 交叉核对当前持仓股是否命中雷区/利好快讯
+        watch_alerts: list[dict[str, Any]] = []
+        try:
+            sf = getattr(live_sim, "STATE_FILE", paths.data_dir() / "paper" / "sim_state.json")
+            if Path(sf).is_file():
+                st = json.loads(Path(sf).read_text(encoding="utf-8"))
+                raw_pos = st.get("positions") or {}
+                pos_list = list(raw_pos.values()) if isinstance(raw_pos, dict) else list(raw_pos)
+                holding_map = {
+                    str(p.get("ts_code") or "").zfill(6): str(p.get("name") or "")
+                    for p in pos_list if p.get("status") != "closed" and p.get("ts_code")
+                }
+                for code, alert in (ns.get("stock_alerts") or {}).items():
+                    if code in holding_map:
+                        watch_alerts.append({
+                            "ts_code": code,
+                            "name": holding_map[code],
+                            "scope": "当前持仓",
+                            **alert,
+                        })
+        except Exception:  # noqa: BLE001
+            pass
+        return {
+            "available": bool(ovs.get("available") or ns.get("available")),
+            "overseas": ovs,
+            "news": ns,
+            "watch_alerts": watch_alerts,
+            "generated_at": datetime.now().isoformat(timespec="seconds"),
+        }
+    return api_guard(lambda: cached_copy("macro_intel", 90.0, _run))
 
 
 @app.get("/api/guitu")
@@ -389,6 +526,7 @@ def api_stream() -> Response:
                 trading = bool(market_clock.is_trading("CN"))
                 d = cached_copy("live_sim", _live_sim_ttl(), _live_sim_enriched)
                 brief = {
+                    "build": int(BUILD),
                     "day": d.get("day"),
                     "n_today": d.get("n_today"),
                     "n_filled_today": d.get("n_filled_today"),

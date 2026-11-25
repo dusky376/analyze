@@ -12,12 +12,17 @@ from typing import Any
 
 
 def _limit_pct(code: str) -> float:
-    c = str(code or "").strip().zfill(6)
-    if c.startswith(("43", "83", "87", "92")):
-        return 0.30
-    if c.startswith(("300", "301", "302", "688", "689")):
-        return 0.20
-    return 0.10
+    """复用 feature_engine.limit_pct 作为板块涨跌幅唯一事实源。"""
+    try:
+        from backend import feature_engine
+        return float(feature_engine.limit_pct(str(code or "").strip().zfill(6)))
+    except Exception:  # noqa: BLE001
+        c = str(code or "").strip().zfill(6)
+        if c.startswith(("43", "83", "87", "92")):
+            return 0.30
+        if c.startswith(("300", "301", "302", "688", "689")):
+            return 0.20
+        return 0.10
 
 
 def _hhmmss_to_min(raw: Any) -> int | None:
@@ -34,13 +39,18 @@ def _hhmmss_to_min(raw: Any) -> int | None:
 def evaluate_turtle_quality(order: dict[str, Any], *,
                             rabbit_count: int = 1,
                             peak_seal_yi: float | None = None,
-                            current_seal_yi: float | None = None) -> dict[str, Any]:
+                            current_seal_yi: float | None = None,
+                            catalyst_score: int | float | None = None,
+                            news_alert: dict[str, Any] | None = None,
+                            rabbit_seal_yi: float | None = None) -> dict[str, Any]:
     """对二板乌龟候选进行综合买点质量评分与撤单预警（0~100 分）。
 
-    防御性硬条件（参考历史复盘假设）：
-    - 炸板次数 > 3（烂板高危）
-    - 换手率超限（主板 > 22%，20cm > 35%）
-    - 封单失血：盘中封单额较峰值骤降 >= 70% 时触发撤单预警（cancel_warn=True）
+    防御性硬条件（反排板逆向选择）：
+    - 个股硬利空雷区（减持/立案/问询/核查/暴雷）→ 直接 REJECT 回避
+    - 炸板次数 > 3（烂板高危）→ REJECT
+    - 换手率超限（主板 > 22%，20cm > 35%）→ REJECT
+    - 封单失血：盘中封单额较峰值骤降 >= 60% 时触发撤单预警（cancel_warn=True）
+    - 外盘/政策催化共振加分；大单强兔（≥1亿）加分、迷你弱兔（<0.3亿）扣分
     """
     code = str(order.get("ts_code") or "").zfill(6)
     lim = _limit_pct(code)
@@ -62,13 +72,20 @@ def evaluate_turtle_quality(order: dict[str, Any], *,
     except (TypeError, ValueError):
         turn_f = None
 
-    first_min = _hhmmss_to_min(order.get("first_seal"))
+    first_min = _hhmmss_to_min(order.get("first_seal") or order.get("first_seal_hhmmss"))
 
     score = 65.0
     reasons: list[str] = []
     reject = False
 
-    # 1) 兔子共振强度
+    # 0) 个股硬利空雷区（减持/立案/问询/核查）一票否决
+    if isinstance(news_alert, dict) and news_alert.get("risk_level") == "danger":
+        tags = "、".join(news_alert.get("danger_tags") or ["硬利空"])
+        score -= 35.0
+        reject = True
+        reasons.append(f"消息雷区({tags}) 一票回避")
+
+    # 1) 兔子共振强度 & 兔子封单强度
     rc = max(0, int(rabbit_count or 0))
     if rc >= 2:
         score += 12.0
@@ -76,8 +93,15 @@ def evaluate_turtle_quality(order: dict[str, Any], *,
     elif rc == 1:
         score += 4.0
         reasons.append("单兔锚定 +4")
+    if rabbit_seal_yi is not None:
+        if rabbit_seal_yi >= 1.0:
+            score += 6.0
+            reasons.append(f"大单强兔({rabbit_seal_yi:.2f}亿) +6")
+        elif 0 < rabbit_seal_yi < 0.30:
+            score -= 6.0
+            reasons.append(f"弱封单兔({rabbit_seal_yi:.2f}亿<0.3亿) -6")
 
-    # 2) 首封时间（早盘封板显著强于午后板）
+    # 2) 首封时间（早盘封板显著强于 10:30 后弱封）
     if first_min is not None:
         if first_min <= 9 * 60 + 40:
             score += 12.0
@@ -86,8 +110,11 @@ def evaluate_turtle_quality(order: dict[str, Any], *,
             score += 4.0
             reasons.append("上午首封 +4")
         elif first_min >= 13 * 60:
-            score -= 12.0
-            reasons.append("午后弱封 -12")
+            score -= 14.0
+            reasons.append("午后弱封(≥13:00) -14")
+        else:
+            score -= 6.0
+            reasons.append("10:30后偏晚封板 -6")
 
     # 3) 炸板次数
     if broken_n is not None:
@@ -118,11 +145,24 @@ def evaluate_turtle_quality(order: dict[str, Any], *,
             score -= 10.0
             reasons.append(f"换手偏高({turn_f:.1f}%) -10")
 
-    # 5) 封单失血撤单预警
+    # 5) 美股映射 / 国内政策催化共振
+    if catalyst_score is not None:
+        cs = float(catalyst_score)
+        if cs >= 2:
+            score += 10.0
+            reasons.append("外盘/政策强催化共振 +10")
+        elif cs >= 1:
+            score += 5.0
+            reasons.append("题材消息催化 +5")
+        elif cs <= -2:
+            score -= 10.0
+            reasons.append("外盘/政策利空承压 -10")
+
+    # 6) 封单失血撤单预警（≥60% 失血预警）
     cancel_warn = False
     if peak_seal_yi and peak_seal_yi > 0 and current_seal_yi is not None:
         drop_ratio = (peak_seal_yi - current_seal_yi) / peak_seal_yi
-        if drop_ratio >= 0.70:
+        if drop_ratio >= 0.60:
             cancel_warn = True
             score -= 20.0
             reasons.append(f"封单失血-{drop_ratio:.0%}({peak_seal_yi:.2f}→{current_seal_yi:.2f}亿) 建议撤单")
@@ -144,6 +184,70 @@ def evaluate_turtle_quality(order: dict[str, Any], *,
         "reject": reject,
         "reasons": reasons,
     }
+
+
+def rank_and_focus_candidates(
+    groups: dict[str, dict[str, Any]],
+    *,
+    max_per_theme: int = 2,
+    max_total: int = 5,
+    catalyst_by_theme: dict[str, float] | None = None,
+    stock_alerts: dict[str, dict[str, Any]] | None = None,
+    drop_rejected: bool = True,
+) -> tuple[dict[str, dict[str, Any]], list[dict[str, Any]]]:
+    """按买点质量聚焦前排龙二（每题材限前 N、单日限总额），避免摊大饼与接烂板。"""
+    if not groups:
+        return {}, []
+    scored: list[tuple[float, int, str, dict[str, Any], dict[str, Any]]] = []
+    skipped: list[dict[str, Any]] = []
+    for code, g in groups.items():
+        theme = str(g.get("guitu_theme") or g.get("industry") or "")
+        rabbits = g.get("guitu_rabbits") or []
+        cat_sc = (catalyst_by_theme or {}).get(theme)
+        alert = (stock_alerts or {}).get(str(code).zfill(6))
+        bq = evaluate_turtle_quality(
+            g,
+            rabbit_count=len(rabbits) if isinstance(rabbits, list) else 1,
+            catalyst_score=cat_sc,
+            news_alert=alert,
+            rabbit_seal_yi=g.get("rabbit_max_seal_yi"),
+        )
+        if drop_rejected and bq["reject"]:
+            skipped.append({
+                "ts_code": code,
+                "name": g.get("name") or "",
+                "theme": theme,
+                "reason": "买点硬过滤回避：" + "；".join(bq["reasons"]),
+                "buy_quality": bq,
+            })
+            continue
+        fmin = _hhmmss_to_min(g.get("first_seal"))
+        scored.append((bq["score"], -(fmin if fmin is not None else 9999), code, g, bq))
+
+    scored.sort(key=lambda x: (-x[0], -x[1], x[2]))
+    selected: dict[str, dict[str, Any]] = {}
+    theme_cnt: dict[str, int] = {}
+    for _sc, _fm, code, g, bq in scored:
+        theme = str(g.get("guitu_theme") or g.get("industry") or "未归类")
+        if len(selected) >= max_total:
+            skipped.append({
+                "ts_code": code, "name": g.get("name") or "", "theme": theme,
+                "reason": f"聚焦前排：当日精选上限 {max_total} 只（评分 {bq['score']} 顺延）",
+                "buy_quality": bq,
+            })
+            continue
+        if theme_cnt.get(theme, 0) >= max_per_theme:
+            skipped.append({
+                "ts_code": code, "name": g.get("name") or "", "theme": theme,
+                "reason": f"同题材「{theme}」已取前 {max_per_theme} 只前排乌龟，不摊大饼",
+                "buy_quality": bq,
+            })
+            continue
+        gg = dict(g)
+        gg["buy_quality_pre"] = bq
+        selected[code] = gg
+        theme_cnt[theme] = theme_cnt.get(theme, 0) + 1
+    return selected, skipped
 
 
 def scan_pre_seal_candidates(theme_rabbits: dict[str, list[str]],

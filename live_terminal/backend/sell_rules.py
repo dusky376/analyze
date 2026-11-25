@@ -165,13 +165,17 @@ def decide(entry_kind: str,
 # ---------------------------------------------------------------------------
 
 def _board_limit_pct(code: str | None) -> float:
-    """按股票代码返回涨跌幅上限（0.10 / 0.20 / 0.30）。"""
-    c = str(code or "").strip().zfill(6)
-    if c.startswith(("43", "83", "87", "92")):
-        return 0.30
-    if c.startswith(("300", "301", "302", "688", "689")):
-        return 0.20
-    return 0.10
+    """按股票代码返回涨跌幅上限（复用 feature_engine.limit_pct 单一事实源）。"""
+    try:
+        from backend import feature_engine
+        return float(feature_engine.limit_pct(str(code or "").strip().zfill(6)))
+    except Exception:  # noqa: BLE001
+        c = str(code or "").strip().zfill(6)
+        if c.startswith(("43", "83", "87", "92")):
+            return 0.30
+        if c.startswith(("300", "301", "302", "688", "689")):
+            return 0.20
+        return 0.10
 
 
 def adaptive_thresholds(code: str | None = None, *,
@@ -298,7 +302,19 @@ def find_adaptive_signal(points: list[dict[str, Any]], *,
         if (start is not None and t < start) or (end is not None and t > end):
             continue
 
-        # 1) 放量/破均价线确认的快速下跌（按真实分钟差 ≤ lookback 过滤，避免跨 30 分钟误判）
+        # 0.5) 路径 B 次日不及预期低开且反抽无力（09:35 后仍弱于开盘与均价线）
+        if entry_kind == "sealed" and pc and pc > 0 and t >= "09:35":
+            open_pct = (op - pc) / pc
+            if open_pct <= -(0.30 * lim) and px < op * 0.995:
+                if avg_px_f is None or px < avg_px_f:
+                    return {
+                        "t": t, "price": px, "kind": "weak_open_exit",
+                        "thresholds": th,
+                        "detail": (f"{t} 次日大幅低开 {open_pct:.2%}（不及预期）且反抽无力"
+                                   f"（现价 {px:.2f} < 开盘 {op:.2f}），提前止损防核按钮"),
+                    }
+
+        # 1) 放量/破均价线确认的快速下跌（按真实分钟差 ≤ lookback 过滤；09:30-09:35 放宽洗盘容忍）
         if i > 0:
             raw_prev = valid_all[max(0, i - lookback):i]
             if cur_m is not None:
@@ -309,18 +325,20 @@ def find_adaptive_signal(points: list[dict[str, Any]], *,
                 prev = raw_prev
             prev_hi = max((float(q["price"]) for q in prev), default=0.0)
             drop_r = (prev_hi - px) / prev_hi if prev_hi > 0 else 0.0
-            if drop_r >= drop_pct:
+            in_open_churn = ("09:30" <= t <= "09:35")
+            eff_drop = drop_pct * 1.6 if in_open_churn else drop_pct
+            if drop_r >= eff_drop:
                 below_vwap = (avg_px_f is None) or (px < avg_px_f)
                 avg_v10 = (sum(vols[-11:-1]) / max(1, len(vols[-11:-1]))) if len(vols) >= 4 else None
                 vol_surge = (vol_f is None) or (avg_v10 is None) or (avg_v10 <= 0) or (vol_f >= 1.5 * avg_v10)
-                if below_vwap or drop_r >= drop_pct * 1.4 or vol_surge:
+                if below_vwap or drop_r >= eff_drop * 1.4 or vol_surge:
                     return {
                         "t": t, "price": px, "kind": "fast_drop",
                         "thresholds": th,
                         "detail": (f"{t} 自适应急跌：{prev_hi:.2f} → {px:.2f} "
-                                   f"(-{drop_r:.2%} ≥ {drop_pct:.2%}"
+                                   f"(-{drop_r:.2%} ≥ {eff_drop:.2%}"
                                    + ("，跌破均价线" if (avg_px_f and px < avg_px_f) else "")
-                                   + ("，锚定兔走弱收紧" if rabbit_weak else "") + ")"),
+                                   + ("，早盘洗盘滤波后确认" if in_open_churn else "") + ")"),
                     }
 
         # 2) 真·冲高回落：必须先有实质冲高，再从全天最高回撤
@@ -350,6 +368,43 @@ def find_adaptive_signal(points: list[dict[str, Any]], *,
     return None
 
 
+def find_partial_profit_signal(points: list[dict[str, Any]], *,
+                               code: str | None = None,
+                               prev_close: float | None = None) -> dict[str, Any] | None:
+    """分批锁利信号：盘中冲高 ≥ 60% 涨停幅度（主板≥+6%）未封板，回落破均价线或回撤≥2% 建议先锁半仓。"""
+    if not points or not prev_close or prev_close <= 0:
+        return None
+    lim = _board_limit_pct(code)
+    pc = float(prev_close)
+    target_surge = 0.60 * lim     # 主板 +6.0%，20cm +12.0%
+    zt_approx = pc * (1.0 + lim - 0.005)
+    peak = 0.0
+    for p in points:
+        try:
+            px = float(p["price"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        if px <= 0:
+            continue
+        peak = max(peak, px)
+        if (peak - pc) / pc < target_surge or px >= zt_approx:
+            continue
+        avg_px = p.get("avg_price")
+        avg_f = float(avg_px) if (avg_px is not None and float(avg_px) > 0) else None
+        pb = (peak - px) / peak if peak > 0 else 0.0
+        if pb >= 0.02 and (avg_f is None or px < avg_f):
+            return {
+                "action": "partial_sell",
+                "ratio": 0.50,
+                "t": str(p.get("t") or ""),
+                "price": px,
+                "kind": "partial_take_profit",
+                "detail": (f"{p.get('t')} 冲高至 +{(peak/pc - 1):.2%} 未封板并回落至 {px:.2f} → "
+                           "建议先兑现 50% 锁利，余仓博连板/断板"),
+            }
+    return None
+
+
 def decide_adaptive(entry_kind: str, *,
                     points: list[dict[str, Any]] | None,
                     code: str | None = None,
@@ -362,10 +417,11 @@ def decide_adaptive(entry_kind: str, *,
                     fallback_time: str | None = None,
                     start: str | None = None,
                     end: str | None = None) -> dict[str, Any]:
-    """自适应卖出决策封装（信号优先，未触发走时间兜底，绝不伪造价格）。"""
+    """自适应卖出决策封装（信号优先，未触发走时间兜底，绝不伪造价格；附分批锁利建议）。"""
     if entry_kind == "unknown":
         return {"action": "hold", "price": None, "kind": "undecidable",
                 "reason": "买入日是否炸板不可判定，不猜"}
+    partial = find_partial_profit_signal(points or [], code=code, prev_close=prev_close)
     sig = find_adaptive_signal(
         points or [], code=code, prev_close=prev_close, open_price=open_price,
         entry_kind=entry_kind, atr5=atr5, rabbit_weak=rabbit_weak,
@@ -378,6 +434,7 @@ def decide_adaptive(entry_kind: str, *,
             "kind": sig["kind"],
             "signal_time": sig["t"],
             "thresholds": sig.get("thresholds"),
+            "partial_signal": partial,
             "reason": sig["detail"],
         }
     if fallback_price is not None and fallback_price > 0:
@@ -388,7 +445,9 @@ def decide_adaptive(entry_kind: str, *,
             "thresholds": adaptive_thresholds(code, atr5=atr5,
                                               rabbit_weak=rabbit_weak,
                                               ice_level=ice_level),
+            "partial_signal": partial,
             "reason": f"窗口内未触发自适应卖点 → 按{fallback_time or '窗口末'}兜底价卖出",
         }
     return {"action": "hold", "price": None, "kind": "undecidable",
+            "partial_signal": partial,
             "reason": "既无触发信号也无兜底价，保持持有（不伪造价格）"}

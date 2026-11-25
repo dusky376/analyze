@@ -73,16 +73,30 @@ def _broken_bucket(broken: Any) -> str:
 
 def make_path_key(record: dict[str, Any]) -> str:
     """将一笔委托或成交映射为可解释的「题材 × 形态」寻优路径键。"""
+    ev = (record.get("guitu") or {}).get("evidence") or {}
     theme = (record.get("guitu_theme")
              or record.get("theme")
              or record.get("industry")
              or "未归类")
     theme_s = str(theme).strip() or "未归类"
-    sb = _seal_bucket(record.get("first_seal"))
-    tb = _turn_bucket(record.get("turn_at_seal") if record.get("turn_at_seal") is not None
-                      else record.get("turnover"))
-    bb = _broken_bucket(record.get("broken_max") if record.get("broken_max") is not None
-                        else record.get("broken"))
+    first_seal = (record.get("first_seal")
+                  if record.get("first_seal") is not None
+                  else record.get("first_seal_hhmmss"))
+    if first_seal is None:
+        first_seal = ev.get("first_seal")
+    sb = _seal_bucket(first_seal)
+    turn = record.get("turn_at_seal")
+    if turn is None:
+        turn = record.get("turnover")
+    if turn is None:
+        turn = ev.get("turnover")
+    tb = _turn_bucket(turn)
+    broken = record.get("broken_max")
+    if broken is None:
+        broken = record.get("broken")
+    if broken is None:
+        broken = ev.get("broken")
+    bb = _broken_bucket(broken)
     return f"{theme_s} | {sb} | {tb} | {bb}"
 
 
@@ -149,19 +163,78 @@ def _norm_day(d: Any) -> str:
     return s if len(s) == 8 and s.isdigit() else ""
 
 
-def evolve_from_records(orders: list[dict[str, Any]],
-                        trades: list[dict[str, Any]],
+def _as_list(records: Any) -> list[dict[str, Any]]:
+    """兼容 sim_state.json 的 dict 形态与测试的 list 形态。"""
+    if isinstance(records, dict):
+        return [v for v in records.values() if isinstance(v, dict)]
+    if isinstance(records, list):
+        return [v for v in records if isinstance(v, dict)]
+    return []
+
+
+def enrich_unfilled_regret(orders: Any,
+                           panel: Any = None) -> list[dict[str, Any]]:
+    """为未成交委托补齐真实次日涨幅（侦察蚁执行遗憾，只读日线，绝不伪造）。"""
+    order_list = [dict(o) for o in _as_list(orders)]
+    need: list[dict[str, Any]] = [
+        o for o in order_list
+        if o.get("status") != "filled"
+        and o.get("missed_next_ret") is None
+        and o.get("entry_price")
+    ]
+    if not need:
+        return order_list
+    try:
+        import polars as pl
+        from backend import feeds
+        p = panel if panel is not None else feeds.build_panel()
+        if p is None or p.height == 0:
+            return order_list
+        codes = sorted({str(o.get("ts_code") or "").zfill(6) for o in need if o.get("ts_code")})
+        if not codes:
+            return order_list
+        sub = (p.filter(pl.col("ts_code").is_in(codes))
+               .select(["ts_code", pl.col("trade_date").cast(pl.Utf8).alias("d"), "close"])
+               .sort(["ts_code", "d"]))
+        by_code: dict[str, list[tuple[str, float]]] = defaultdict(list)
+        for r in sub.iter_rows(named=True):
+            d8 = _norm_day(r["d"])
+            px = r.get("close")
+            if d8 and px and float(px) > 0:
+                by_code[str(r["ts_code"]).zfill(6)].append((d8, float(px)))
+        for o in need:
+            c = str(o.get("ts_code") or "").zfill(6)
+            d0 = _norm_day(o.get("day") or o.get("entry_date"))
+            ep = float(o.get("entry_price") or 0.0)
+            if not d0 or ep <= 0:
+                continue
+            nxt = next(((d1, px1) for d1, px1 in by_code.get(c, []) if d1 > d0), None)
+            if nxt:
+                o["missed_next_day"] = nxt[0]
+                o["missed_next_ret"] = round(nxt[1] / ep - 1.0, 6)
+    except Exception:  # noqa: BLE001
+        return order_list
+    return order_list
+
+
+def evolve_from_records(orders: list[dict[str, Any]] | dict[str, dict[str, Any]],
+                        trades: list[dict[str, Any]] | dict[str, dict[str, Any]],
                         *,
                         rho: float = RHO,
-                        alpha: float = ALPHA) -> dict[str, Any]:
+                        alpha: float = ALPHA,
+                        all_days: list[str] | None = None) -> dict[str, Any]:
     """按交易日严格因果推进蚁群信息素更新，并输出影子账本对照。
 
     Args:
-        orders: 委托列表（含已成交和未成交单，用于补充首封/换手/炸板与侦察蚁特征）
+        orders: 委托集合（支持 list 或 sim_state.json 的 dict 形态）
         trades: 已结算成交列表（含 entry_date, exit_date, gross_return/net_return, exit_blocked）
+        all_days: 可选的交易日序列（用于在空仓日也执行自然挥发）
     """
+    order_list = _as_list(orders)
+    trade_list = _as_list(trades)
+
     order_by_key: dict[tuple[str, str], dict[str, Any]] = {}
-    for o in orders or []:
+    for o in order_list:
         d = _norm_day(o.get("day") or o.get("entry_date"))
         c = str(o.get("ts_code") or "").zfill(6)
         if d and c:
@@ -169,7 +242,7 @@ def evolve_from_records(orders: list[dict[str, Any]],
 
     # 按结算日聚合反馈（确保第 T 日结算的结果只影响 T+1 及之后的权重）
     events_by_day: dict[str, list[dict[str, Any]]] = defaultdict(list)
-    for t in trades or []:
+    for t in trade_list:
         ed = _norm_day(t.get("entry_date"))
         xd = _norm_day(t.get("exit_date")) or ed
         c = str(t.get("ts_code") or "").zfill(6)
@@ -196,18 +269,20 @@ def evolve_from_records(orders: list[dict[str, Any]],
             **rw,
         })
 
-    # 侦察蚁：未成交单若带 next_day_ret / missed_next_ret 字段也纳入信息素与遗憾统计
-    for o in orders or []:
+    # 侦察蚁：未成交单若带 missed_next_ret 字段也纳入信息素与遗憾统计
+    # 归属到次日（missed_next_day）以保证严格因果、无未来函数
+    for o in order_list:
         if o.get("status") == "filled":
             continue
-        d = _norm_day(o.get("day"))
+        d = _norm_day(o.get("day") or o.get("entry_date"))
         c = str(o.get("ts_code") or "").zfill(6)
         mnr = o.get("missed_next_ret")
         if d and c and mnr is not None:
             rw = compute_reward(None, filled=False, missed_next_ret=float(mnr))
             if rw["reward"] != 0.0:
-                events_by_day[d].append({
-                    "day": d,
+                evt_day = _norm_day(o.get("missed_next_day")) or d
+                events_by_day[evt_day].append({
+                    "day": evt_day,
                     "entry_day": d,
                     "ts_code": c,
                     "name": str(o.get("name") or ""),
@@ -221,16 +296,22 @@ def evolve_from_records(orders: list[dict[str, Any]],
     stats: dict[str, dict[str, Any]] = {}
     feedback_log: list[dict[str, Any]] = []
 
-    # 因果影子收益对照：每笔成交在 entry_date 时读取「截至 entry_date 之前」的 tau
-    # 先按日推进记录每日结算后的 tau 快照
+    # 按日推进记录每日结算后的 tau 快照（含空仓日自然挥发）
+    evt_days = sorted(events_by_day.keys())
+    timeline = list(evt_days)
+    if evt_days and all_days:
+        first_d = evt_days[0]
+        extra = [_norm_day(x) for x in all_days]
+        timeline = sorted(set(evt_days) | {x for x in extra if x and x >= first_d})
+
     tau_history: list[tuple[str, dict[str, float]]] = []
-    for day in sorted(events_by_day.keys()):
+    for day in timeline:
         # 1) 全路径自然挥发（向中性值 TAU_INIT 衰减）
         for pk in list(tau.keys()):
             tau[pk] = round((1.0 - rho) * tau[pk] + rho * TAU_INIT, 4)
 
         # 2) 按路径聚合当日奖惩并沉积信息素
-        day_evts = events_by_day[day]
+        day_evts = events_by_day.get(day) or []
         by_path: dict[str, list[dict[str, Any]]] = defaultdict(list)
         for ev in day_evts:
             by_path[ev["path"]].append(ev)
@@ -336,7 +417,7 @@ def evolve_from_records(orders: list[dict[str, Any]],
 
     return {
         "available": True,
-        "mode": "shadow_only",
+        "mode": "causal_feedback",
         "params": {
             "rho_evaporation": rho,
             "alpha_deposit": alpha,
@@ -359,6 +440,33 @@ def evolve_from_records(orders: list[dict[str, Any]],
     }
 
 
+def causal_multipliers_before(day: str,
+                              orders: Any,
+                              trades: Any,
+                              *,
+                              all_days: list[str] | None = None) -> dict[str, dict[str, float]]:
+    """严格因果计算「day 之前」各路径的信息素与建议仓位系数（供 live_sim.plan_orders 实时接入）。"""
+    d_cut = _norm_day(day)
+    if not d_cut:
+        return {}
+    past_trades = [
+        t for t in _as_list(trades)
+        if (_norm_day(t.get("exit_date")) or _norm_day(t.get("entry_date"))) < d_cut
+    ]
+    past_orders = [
+        o for o in _as_list(orders)
+        if _norm_day(o.get("day") or o.get("entry_date")) < d_cut
+    ]
+    past_days = [x for x in (all_days or []) if _norm_day(x) < d_cut] if all_days else None
+    if not past_trades and not any(o.get("missed_next_ret") is not None for o in past_orders):
+        return {}
+    res = evolve_from_records(past_orders, past_trades, all_days=past_days)
+    return {
+        p["path"]: {"tau": float(p["pheromone"]), "size_mult": float(p["size_mult"])}
+        for p in (res.get("paths") or [])
+    }
+
+
 def snapshot() -> dict[str, Any]:
     """从真实生产账本只读计算当前信息素进化快照（绝不写生产账本）。"""
     try:
@@ -367,7 +475,12 @@ def snapshot() -> dict[str, Any]:
         if not Path(sf).is_file():
             return evolve_from_records([], [])
         st = json.loads(Path(sf).read_text(encoding="utf-8"))
-        return evolve_from_records(st.get("orders") or [], st.get("trades") or [])
+        orders = enrich_unfilled_regret(st.get("orders") or {})
+        return evolve_from_records(
+            orders,
+            st.get("trades") or [],
+            all_days=st.get("days") or None,
+        )
     except Exception as exc:  # noqa: BLE001
         return {
             "available": False,
