@@ -733,6 +733,290 @@ def find_exit(entry_date: str,
 
 
 
+def build_sell_plan(pos: dict[str, Any], daily: list[dict[str, Any]],
+                    *, code: str | None = None) -> dict[str, Any]:
+    """按用户 2026-11-25 裁定生成卖出计划（分钟级信号 + 时间兜底）。
+
+    两条路径：
+      A. 买入日**收盘仍炸板**（未回封）→ 次日 10:00 前卖
+      B. 买入日收盘封住（未炸板）    → 首个断板日收盘前卖
+
+    优先级：窗口内出现「快速下跌 / 冲高回落」信号 → 按信号价卖；
+            否则按窗口末兜底价（A=次日10:00前最后价, B=断板日收盘价）。
+
+    Returns: dict（available/kind/window/decision/...），失败则 available=False。
+    """
+    from backend import dates, sell_rules
+
+    entry = float(pos.get("entry_price") or 0.0)
+    entry_day = str(pos.get("entry_date") or "")
+    if not (entry > 0) or not entry_day:
+        return {"available": False, "reason": "缺买入价或买入日"}
+
+    # --- 买入日归类：收盘时是否仍炸板 ---
+    entry_row = next((d for d in daily
+                      if dates.norm_day(d.get("date")) == dates.norm_day(entry_day)),
+                     None)
+    if entry_row is None:
+        return {"available": False, "reason": f"日线无买入日 {entry_day}"}
+    sealed_at_close = bool(entry_row.get("zt"))
+    broken = pos.get("broken_max")
+    if broken is None:
+        broken = (pos.get("order") or {}).get("broken_max")
+    kind = sell_rules.classify_entry_day(broken, sealed_at_close)
+
+    plan: dict[str, Any] = {
+        "available": True,
+        "entry_kind": kind,
+        "entry_sealed_at_close": sealed_at_close,
+        "entry_broken_times": broken,
+        "thresholds": {"drop_pct": sell_rules.DROP_PCT,
+                       "pullback_pct": sell_rules.PULLBACK_PCT},
+    }
+
+    after = [d for d in daily
+             if dates.is_after(d.get("date"), dates.norm_day(entry_day))]
+    if not after:
+        # 2026-11-25 盘中：买入日的次日就是今天，但当日日线还没落盘。
+        # 两条路径都必须能走盘中判定，否则持仓永远显示「T+1 未到」。
+        today = _cn_today_str()
+        is_t1 = bool(today and dates.is_after(today, dates.norm_day(entry_day)))
+        if kind == "broke_and_stayed" and is_t1:
+            # A 路径：卖出窗口正是「今天 10:00 前」
+            plan["window"] = {
+                "date": today, "until": sell_rules.FALLBACK_TIME_A,
+                "rule": "买入日收盘仍炸板 → 次日 10:00 前卖出（盘中实时）",
+                "intraday": True,
+            }
+            pts = _minute_points(today, code, live=True)
+            win_pts = [p for p in pts
+                       if str(p.get("t")) <= sell_rules.FALLBACK_TIME_A]
+            fallback_px = (float(win_pts[-1]["price"]) if win_pts
+                           else _live_price(code))
+            plan["decision"] = sell_rules.decide(
+                kind, points=win_pts, fallback_price=fallback_px,
+                fallback_time=f"{today} 10:00 前")
+            plan["minute_source"] = "tencent_1min_live" if pts else "live_quote"
+            return plan
+        if kind == "sealed" and is_t1:
+            # B 路径：今天可能**就是**断板日（实时价已离开涨停）
+            px_now = _live_price(code)
+            lu = _limit_up_of(code, entry_row,
+                              prev_close=_prev_close_before(daily, entry_day))
+            if px_now and lu and px_now < lu - 1e-9:
+                plan["window"] = {
+                    "date": today, "until": "收盘",
+                    "rule": "买入日未炸板 → 今日断板，收盘前卖出（盘中实时）",
+                    "intraday": True,
+                }
+                pts = _minute_points(today, code, live=True)
+                plan["decision"] = sell_rules.decide(
+                    kind, points=pts, fallback_price=px_now,
+                    fallback_time=f"{today} 收盘前（现价）")
+                plan["minute_source"] = "tencent_1min_live" if pts else "live_quote"
+                return plan
+            plan["window"] = {"date": None, "until": "断板日收盘",
+                              "rule": "买入日未炸板 → 等待首个断板日"}
+            plan["decision"] = {
+                "action": "hold", "price": None, "kind": "pending",
+                "reason": (f"今日实时价 {px_now or '—'} 仍封涨停"
+                           f"（涨停价 {lu or '—'}），尚未断板；断板当日收盘前卖出")}
+            return plan
+        plan.update(available=False, reason="买入日之后暂无日线（T+1 未到）")
+        return plan
+
+    if kind == "broke_and_stayed":
+        # A：次一交易日 10:00 前
+        nxt = after[0]
+        plan["window"] = {"date": str(nxt.get("date")), "until": sell_rules.FALLBACK_TIME_A,
+                          "rule": "买入日收盘仍炸板 → 次日 10:00 前卖出"}
+        pts = _minute_points(str(nxt.get("date")), code)
+        win_pts = [p for p in pts if str(p.get("t")) <= sell_rules.FALLBACK_TIME_A]
+        fallback_px = (float(win_pts[-1]["price"]) if win_pts
+                       else float(nxt.get("open") or nxt.get("close") or 0) or None)
+        plan["decision"] = sell_rules.decide(
+            kind, points=win_pts, fallback_price=fallback_px,
+            fallback_time=f"{nxt.get('date')} 10:00 前")
+        plan["minute_source"] = "tencent_1min" if pts else "daily_fallback"
+        return plan
+
+    if kind == "sealed":
+        # B：首个断板日收盘前（复用 find_exit 定位断板日，含跌停顺延）
+        exit_row, status = find_exit(entry_day, daily, code=code)
+        if status == "closed" and exit_row is not None:
+            exit_day = str(exit_row.get("date"))
+            plan["window"] = {"date": exit_day, "until": "收盘",
+                              "rule": "买入日未炸板 → 首个断板日收盘前卖出"}
+            pts = _minute_points(exit_day, code)
+            plan["decision"] = sell_rules.decide(
+                kind, points=pts,
+                fallback_price=float(exit_row.get("close") or 0) or None,
+                fallback_time=f"{exit_day} 收盘")
+            plan["minute_source"] = "tencent_1min" if pts else "daily_fallback"
+            return plan
+
+        # 2026-11-25 盘中：日线还没覆盖断板日，但今天可能**就是**断板日
+        # （实时价已离开涨停）。此时按「今天收盘前」窗口判定。
+        today = _cn_today_str()
+        if today and dates.is_after(today, dates.norm_day(entry_day)):
+            px_now = _live_price(code)
+            lu = _limit_up_of(code, entry_row,
+                              prev_close=_prev_close_before(daily, entry_day))
+            if px_now and lu and px_now < lu - 1e-9:      # 已离开涨停 → 今天断板
+                plan["window"] = {"date": today, "until": "收盘",
+                                  "rule": "买入日未炸板 → 今日断板，收盘前卖出（盘中实时）",
+                                  "intraday": True}
+                pts = _minute_points(today, code, live=True)
+                plan["decision"] = sell_rules.decide(
+                    kind, points=pts, fallback_price=px_now,
+                    fallback_time=f"{today} 收盘前（现价）")
+                plan["minute_source"] = "tencent_1min_live" if pts else "live_quote"
+                return plan
+            # 仍封在涨停 → 今天还没断板，继续持有等待
+            plan.update(decision={
+                "action": "hold", "price": None, "kind": "pending",
+                "reason": (f"今日实时价 {px_now or '—'} 仍封涨停"
+                           f"（涨停价 {lu or '—'}），尚未断板；断板当日收盘前卖出")})
+            plan["window"] = {"date": None, "until": "断板日收盘",
+                              "rule": "买入日未炸板 → 等待首个断板日"}
+            return plan
+
+        plan.update(decision={"action": "hold", "price": None,
+                              "kind": "undecidable",
+                              "reason": f"尚未出现可结算断板日（{status}）"})
+        return plan
+
+    plan.update(decision={"action": "hold", "price": None, "kind": "undecidable",
+                          "reason": "买入日炸板状态不可判定（缺 broken/封板字段）"})
+    return plan
+
+
+def _cn_today_str() -> str:
+    """A 股口径今天（YYYYMMDD）。"""
+    try:
+        from backend import market_clock
+        tz = market_clock.TZ_CN
+        return (datetime.now(tz) if tz else datetime.now()).strftime("%Y%m%d")
+    except Exception:  # noqa: BLE001
+        return datetime.now().strftime("%Y%m%d")
+
+
+def _limit_up_of(code: str | None, entry_row: dict[str, Any] | None,
+                 prev_close: float | None = None) -> float | None:
+    """买入日涨停价。
+
+    优先取 entry_row 里的 limit_up；否则用「前收 × (1 + 板块幅度)」推算
+    （日线 panel 只有 OHLC，没有 limit_up 列 —— 2026-11-25 实测）。
+    """
+    if entry_row:
+        for k in ("limit_up",):
+            v = entry_row.get(k)
+            try:
+                f = float(v)
+                if f > 0:
+                    return f
+            except (TypeError, ValueError):
+                pass
+    # 兜底：前收 ×(1+幅度)
+    try:
+        pc = float(prev_close) if prev_close else None
+        if pc and pc > 0 and code:
+            from backend import feature_engine
+            return round(pc * (1.0 + float(feature_engine.limit_pct(str(code)))), 2)
+    except Exception:  # noqa: BLE001
+        return None
+    return None
+
+
+def _prev_close_before(daily: list[dict[str, Any]], day: str) -> float | None:
+    """某日的前一交易日收盘价（用于推算涨停价）。"""
+    from backend import dates
+    nd = dates.norm_day(day)
+    prev = None
+    for d in daily:
+        if dates.is_after(d.get("date"), nd):
+            break
+        prev = d.get("close")
+    try:
+        return float(prev) if prev else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _live_price(code: str | None) -> float | None:
+    """取该票最新实时价（all_quotes）；失败返回 None。"""
+    if not code:
+        return None
+    try:
+        from backend import feeds
+        q = feeds.all_quotes(force=True)
+        r = q.filter(pl.col("ts_code") == str(code).zfill(6))
+        if r.height:
+            px = r["price"][0]
+            return float(px) if px and px > 0 else None
+    except Exception:  # noqa: BLE001
+        return None
+    return None
+
+
+def _minute_points(day: str, code: str | None,
+                   *, live: bool = False) -> list[dict[str, Any]]:
+    """取某日某票的分钟序列（腾讯 1min，失败回落到 quotes 留档 5min 快照）。
+
+    Args:
+        live: True 时优先用 ``minute_flow.live_series``（短 TTL，随行情推进），
+              适合「今天盘中」的实时判定。
+
+    返回 ``[{"t": "HH:MM", "price": float}]``，取不到返回 []（不猜）。
+    """
+    if not code:
+        return []
+    c = str(code).zfill(6)
+    out: list[dict[str, Any]] = []
+    try:
+        from backend import minute_flow
+        if live:
+            ser = minute_flow.live_series(c, str(day))
+            if ser:
+                for it in ser:
+                    t = str(it.get("t") or "")
+                    px = it.get("price")
+                    if px and px > 0 and ":" in t:
+                        out.append({"t": t, "price": float(px)})
+                if out:
+                    return sorted(out, key=lambda x: x["t"])
+        ser = minute_flow.minute_series(c, str(day))
+        if ser:
+            for t, px, _amt in ser:
+                if px and px > 0:
+                    hh, mm = str(t)[:2], str(t)[2:4]
+                    out.append({"t": f"{hh}:{mm}", "price": float(px)})
+    except Exception:  # noqa: BLE001
+        out = []
+    if out:
+        return sorted(out, key=lambda x: x["t"])
+    # 回落：当日 quotes 留档（5 分钟一帧）
+    try:
+        qdir = LIVE_DIR / str(day) / "quotes"
+        for f in sorted(qdir.glob("quotes_*.parquet")):
+            stem = f.stem.replace("quotes_", "")
+            if len(stem) == 6:
+                hhmm = f"{stem[:2]}:{stem[2:4]}"
+            elif len(stem) >= 14:
+                hhmm = f"{stem[8:10]}:{stem[10:12]}"
+            else:
+                continue
+            df = pl.read_parquet(f, columns=["ts_code", "price"])
+            r = df.filter(pl.col("ts_code") == c)
+            if r.height:
+                px = r["price"][0]
+                if px and px > 0:
+                    out.append({"t": hhmm, "price": float(px)})
+    except Exception:  # noqa: BLE001
+        return []
+    return sorted(out, key=lambda x: x["t"])
+
+
 def settle(pos: dict[str, Any], daily: list[dict[str, Any]]) -> dict[str, Any]:
     """按真实日线更新一笔持仓（纯函数，返回新 dict，不改入参）。
 
@@ -749,6 +1033,14 @@ def settle(pos: dict[str, Any], daily: list[dict[str, Any]]) -> dict[str, Any]:
 
     p = dict(pos)
     code = str(p.get("ts_code") or "") or None
+    # 2026-11-25 用户裁定：卖出按「买入日收盘是否仍炸板」分流。
+    # 这里先算一份 sell_plan（分钟级信号 + 时间兜底），**并存**在持仓上，
+    # 不覆盖现有 exit_price/r_net（历史可复现，口径切换由用户再定）。
+    try:
+        p["sell_plan"] = build_sell_plan(p, daily, code=code)
+    except Exception as exc:  # noqa: BLE001 - 卖出计划失败不影响既有结算
+        p["sell_plan"] = {"available": False,
+                          "reason": f"{type(exc).__name__}: {exc}"}
     exit_row, status = find_exit(str(p["entry_date"]), daily, code=code)
     p["last_checked"] = datetime.now().strftime("%Y-%m-%d")
     if status != "closed" or exit_row is None:
