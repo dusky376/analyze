@@ -39,13 +39,14 @@ from typing import Any
 import numpy as np
 import polars as pl
 
-from backend import leader_ladder
+from backend import leader_ladder, paths
 
 ROOT = Path(__file__).resolve().parents[1]
-PANEL = ROOT / "data" / "panel_raw.parquet"
-GUITU_SIM = ROOT / "data" / "guitu_sim.json"
-WEEKLY = ROOT / "data" / "weekly_review.json"
-LIVE = ROOT / "data" / "live"
+# 数据与代码分离：全部数据文件经 backend.paths 解析。
+PANEL = paths.panel_raw_file()
+GUITU_SIM = paths.data_dir() / "guitu_sim.json"
+WEEKLY = paths.data_dir() / "weekly_review.json"
+LIVE = paths.live_dir()
 
 # 用户标注的角色：rabbit=一字兔子，turtle=厂字乌龟，heavy=盘子偏大，none=未标注
 ROLE_CN = {"rabbit": "一字兔子", "turtle": "厂字乌龟", "heavy": "盘子偏大", "none": "未标注"}

@@ -103,8 +103,9 @@ def axis_path() -> Path:
     """题材轴 yaml 路径。
 
     刻意复用 `theme_pool.axis_path()` 而不是在这里再拼一次路径：
-    路径规则只允许有一个出处（`paths.data_dir().parent / "configs"`），
-    否则 `WUKONG_DATA_HOME` 一改就会出现「两个模块读两个文件」。
+    路径规则只允许有一个出处，否则 `WUKONG_DATA_HOME` 一改就会出现
+    「两个模块读两个文件」。配置跟随代码（不是数据），
+    由 `paths.configs_dir()` 解析。
     """
     return theme_pool.axis_path()
 

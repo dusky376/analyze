@@ -251,8 +251,16 @@ def test_locked_update_returns_saved_state(store):
 # ---------------------------------------------------------------------------
 
 def test_production_store_keeps_user_anchors():
-    """生产样本库必须保留用户 15 个 anchor 种子（迁移不可丢）。"""
-    real = json.loads((ROOT / "data" / "ice_samples.json").read_text(encoding="utf-8"))
+    """生产样本库必须保留用户 15 个 anchor 种子（迁移不可丢）。
+
+    2026-11-25 数据/代码分离后，样本库位置由 `paths.data_dir()` 解析，
+    这里不再硬编码 `live_terminal/data`。
+    """
+    from backend import paths
+    store = paths.data_dir() / "ice_samples.json"
+    if not store.is_file():
+        pytest.skip(f"生产样本库不存在：{store}")
+    real = json.loads(store.read_text(encoding="utf-8"))
     anchors = [s for s in real.get("seeds") or []
                if isinstance(s, dict) and s.get("status") == "anchor"]
     assert len(anchors) == 15, f"人工锚点应为 15 个，实际 {len(anchors)}"

@@ -39,11 +39,13 @@ from flask import Flask, Response, jsonify, request, send_from_directory
 from backend import (charts, data_health, exit_alternatives, feeds, guitu_backtest,
                      guitu_cases, ice_samples, leader_ladder, live_sim, market_clock,
                      queue_match, recorder)
+from backend import paths
 from backend.json_safe import sanitize
 
 ROOT = Path(__file__).resolve().parent
 WEB = ROOT / "web"
-DATA = ROOT / "data"
+# 数据与代码分离：数据根由 backend.paths 统一解析（支持 WUKONG_DATA_HOME）。
+DATA = paths.data_dir()
 
 
 def source_build() -> float:
@@ -215,6 +217,8 @@ def api_health() -> Response:
             "live_archive": {"days": len(live_days), "latest": live_days[-1] if live_days else None},
             "archive_check": data_health.check(),
             "recorder": rec,
+            # 2026-11-25 数据/代码分离：暴露实际数据根，便于确认数据是否被搬走/指错。
+            "paths": paths.describe(),
             "data_policy": "只读真实落盘：涨停池留档 + 真实日线；不合成、不插值、不补数。",
         }
     return api_guard(_run)

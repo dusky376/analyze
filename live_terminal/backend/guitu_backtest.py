@@ -32,11 +32,12 @@ from typing import Any
 import numpy as np
 import polars as pl
 
-from backend import costs, feature_engine, feeds, queue_match
+from backend import costs, feature_engine, feeds, paths, queue_match
 
 ROOT = Path(__file__).resolve().parents[1]
 
-OUT = ROOT / "data" / "guitu_sim.json"
+# 数据与代码分离：输出文件落在数据根，不在代码目录。
+OUT = paths.data_dir() / "guitu_sim.json"
 
 #: 单一成本口径（用户 2026-11-23 裁定）：万0.84免五，见 costs.DEFAULT。
 #: 历史回放只有日线、无逐笔队列，成本按纯费率近似（不含逐腿差异）。

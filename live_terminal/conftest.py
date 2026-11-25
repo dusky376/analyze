@@ -46,7 +46,8 @@ def pytest_configure(config):
     opt = config.option
     if not getattr(opt, "basetemp", None):
         stamp = time.strftime("%Y%m%d_%H%M%S")
-        basetemp = ROOT / "data" / "_pt" / f"run-{stamp}"
+        from backend import paths
+        basetemp = paths.data_dir() / "_pt" / f"run-{stamp}"
         opt.basetemp = str(basetemp)
         try:
             basetemp.parent.mkdir(parents=True, exist_ok=True)

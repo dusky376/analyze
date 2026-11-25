@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updated_at": "2026-11-25T14:58:49",
+  "updated_at": "2026-11-25T19:16:49",
   "feature_note": null,
   "seeds": [
     {
@@ -1119,7 +1119,7 @@
       "is_ice": true,
       "ice_type": "both",
       "size_factor": 0.5,
-      "detected_at": "2026-11-25T14:58:49",
+      "detected_at": "2026-11-25T19:16:49",
       "source": "auto"
     },
     "2026-11-17": {
@@ -1216,6 +1216,30 @@
       "ice_type": "both",
       "size_factor": 0.3,
       "detected_at": "2026-11-23T22:28:09",
+      "source": "auto"
+    },
+    "2026-11-25": {
+      "date": "2026-11-25",
+      "metrics": {
+        "down_share": 0.8942,
+        "limit_down_n": 61,
+        "limit_up_n": 57,
+        "dt_ratio": 1.0702,
+        "broken_hi_n": 2,
+        "up": 583,
+        "down": 4927
+      },
+      "dim_levels": {
+        "down_share": "L5",
+        "limit_down_n": "L4",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-25T19:16:36",
       "source": "auto"
     }
   },
@@ -7097,7 +7121,7 @@
       "is_ice": true,
       "ice_type": "both",
       "size_factor": 0.5,
-      "detected_at": "2026-11-25T14:58:49",
+      "detected_at": "2026-11-25T19:16:49",
       "source": "auto"
     },
     "2026-11-17": {
@@ -7242,6 +7266,30 @@
       "ice_type": null,
       "size_factor": 1.0,
       "detected_at": "2026-11-25T13:48:25",
+      "source": "auto"
+    },
+    "2026-11-25": {
+      "date": "2026-11-25",
+      "metrics": {
+        "down_share": 0.8942,
+        "limit_down_n": 61,
+        "limit_up_n": 57,
+        "dt_ratio": 1.0702,
+        "broken_hi_n": 2,
+        "up": 583,
+        "down": 4927
+      },
+      "dim_levels": {
+        "down_share": "L5",
+        "limit_down_n": "L4",
+        "dt_ratio": "L3",
+        "broken_hi_n": "L0"
+      },
+      "severity_level": "L5",
+      "is_ice": true,
+      "ice_type": "both",
+      "size_factor": 0.3,
+      "detected_at": "2026-11-25T19:16:36",
       "source": "auto"
     }
   },

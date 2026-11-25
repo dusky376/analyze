@@ -22,7 +22,8 @@ def production_report():
     必须显式指向生产账本路径。
     """
     import backend.live_sim as LS
-    prod = Path(__file__).resolve().parents[1] / "data" / "paper" / "sim_state.json"
+    from backend import paths
+    prod = paths.paper_dir() / "sim_state.json"
     if not prod.is_file():
         pytest.skip("无生产账本，跳过真实样本断言")
     saved = LS.STATE_FILE

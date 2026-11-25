@@ -23,10 +23,11 @@ from typing import Any
 
 import polars as pl
 
-from backend import feeds
+from backend import archive, feeds, paths
 
 ROOT = Path(__file__).resolve().parents[1]
-LIVE = ROOT / "data" / "live"
+# 数据与代码分离：留档根统一由 backend.paths 解析。
+LIVE = paths.live_dir()
 
 #: 行情快照超过这么久仍显示，但不再标「实时」（如午休 11:30–13:00）。
 LIVE_STALE_SEC = 180.0
@@ -112,12 +113,11 @@ def _quotes_bar_for(code: str, day: str) -> dict[str, Any] | None:
     （历史上把半日 bar 写进面板曾造成假收益污染）。
     """
     d = _compact(day)
-    qdir = ROOT / "data" / "live" / d / "quotes"
-    snaps = sorted(qdir.glob("quotes_*.parquet"))
-    if not snaps:
+    # 2026-11-25 瘦身：逐帧 / 合并归档都由 archive 抽象层统一处理。
+    df = archive.latest_frame(d, "quotes")
+    if df is None or df.height == 0:
         return None
     try:
-        df = pl.read_parquet(snaps[-1])
         r = df.filter(pl.col("ts_code") == str(code).zfill(6))
         if r.height == 0:
             return None
@@ -224,28 +224,29 @@ def kline(code: str, *, days: int = 40,
 def _archive_points(code: str, day: str) -> tuple[list[dict[str, Any]], str]:
     """从 quotes 留档帧抽 (时刻, 价格) 序列（5 分钟一帧）。"""
     d = _compact(day)
-    qdir = LIVE / d / "quotes"
-    snaps = sorted(qdir.glob("quotes_*.parquet"))
+    # 2026-11-25 瘦身：逐帧 / 合并归档统一读取，frame 列即 HHMMSS。
+    frames = archive.read_frames(d, "quotes")
     points: list[dict[str, Any]] = []
-    for f in snaps:
-        stem = f.stem.replace("quotes_", "")
-        if len(stem) == 6:                    # quotes_092622.parquet → HHMMSS
-            hhmmss = f"{stem[:2]}:{stem[2:4]}:{stem[4:6]}"
-        elif len(stem) >= 14:                 # quotes_20261124092622.parquet
-            hhmmss = f"{stem[8:10]}:{stem[10:12]}:{stem[12:14]}"
-        else:
-            continue
-        df = pl.read_parquet(f, columns=["ts_code", "price", "prev_close"])
-        r = df.filter(pl.col("ts_code") == str(code).zfill(6))
-        if r.height:
-            px = r["price"][0]
-            if px is not None:
-                pc = r["prev_close"][0] if "prev_close" in r.columns else None
-                points.append({
-                    "t": hhmmss,
-                    "price": float(px),
-                    "prev_close": float(pc) if pc is not None else None,
-                })
+    if frames is not None and frames.height:
+        cols = [c for c in ("frame", "ts_code", "price", "prev_close")
+                if c in frames.columns]
+        sub = (frames.select(cols)
+               .filter(pl.col("ts_code") == str(code).zfill(6)))
+        has_pc = "prev_close" in sub.columns
+        for r in sub.iter_rows(named=True):
+            px = r.get("price")
+            if px is None:
+                continue
+            stem = str(r.get("frame") or "")
+            if len(stem) != 6:
+                continue
+            points.append({
+                "t": f"{stem[:2]}:{stem[2:4]}:{stem[4:6]}",
+                "price": float(px),
+                "prev_close": (float(r["prev_close"])
+                               if has_pc and r.get("prev_close") is not None
+                               else None),
+            })
     points.sort(key=lambda x: x["t"])
     return points, d
 

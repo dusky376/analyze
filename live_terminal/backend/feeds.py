@@ -27,7 +27,8 @@ import polars as pl
 import requests
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA = ROOT / "data"
+# 数据与代码分离：数据根统一由 backend.paths 解析（支持 WUKONG_DATA_HOME）。
+DATA = paths.data_dir()
 DATA.mkdir(parents=True, exist_ok=True)
 
 # 项目既有全市场日线缓存（只读，不修改原项目）
@@ -717,14 +718,11 @@ def eod_bar_from_quotes(day: str, *,
     """
     d = str(day).replace("-", "").replace("/", "")[:8]
     if quotes is None:
-        qdir = paths.data_dir() / "live" / d / "quotes"
-        files = sorted(qdir.glob("quotes_*.parquet")) if qdir.is_dir() else []
-        if not files:
+        # 2026-11-25 瘦身：逐帧 / 合并归档统一由 archive 抽象层读取。
+        from backend import archive
+        quotes = archive.latest_frame(d, "quotes")
+        if quotes is None or quotes.height == 0:
             return None, f"{d} 无行情留档"
-        try:
-            quotes = pl.read_parquet(files[-1])
-        except Exception as exc:  # noqa: BLE001
-            return None, f"读取 {files[-1].name} 失败: {type(exc).__name__}: {exc}"
     if quotes is None or quotes.height == 0:
         return None, "行情为空"
     try:

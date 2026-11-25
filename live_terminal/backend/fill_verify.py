@@ -123,12 +123,9 @@ def daily_amount(day: str, code: str) -> float | None:
     # 盘中回退：日线面板还没有当日 bar → 用 quotes 留档最新帧的累计成交额
     if val is None:
         try:
-            from pathlib import Path as _P
-            qdir = (_P(__file__).resolve().parents[1] / "data" / "live"
-                    / str(day) / "quotes")
-            snaps = sorted(qdir.glob("quotes_*.parquet"))
-            if snaps:
-                df = pl.read_parquet(snaps[-1])
+            from backend import archive
+            df = archive.latest_frame(str(day), "quotes")
+            if df is not None and df.height:
                 r = df.filter(pl.col("ts_code") == str(code).zfill(6))
                 if r.height:
                     a = r["amount"][0]

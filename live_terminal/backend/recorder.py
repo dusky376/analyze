@@ -29,10 +29,11 @@ from typing import Any
 
 import polars as pl
 
-from backend import feeds
+from backend import feeds, paths
 
 ROOT = Path(__file__).resolve().parents[1]
-LIVE = ROOT / "data" / "live"
+# 数据与代码分离：留档根统一由 backend.paths 解析。
+LIVE = paths.live_dir()
 RETENTION_DAYS = 60
 
 AUCTION_START, AUCTION_END = dtime(9, 15), dtime(9, 26)

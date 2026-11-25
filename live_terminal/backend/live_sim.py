@@ -67,12 +67,15 @@ from typing import Any
 import numpy as np
 import polars as pl
 
-from backend import costs, feature_engine, guitu_roles, queue_match
+from backend import archive, costs, feature_engine, guitu_roles, paths, queue_match
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA = ROOT / "data"
+# 数据与代码分离：所有数据路径统一由 backend.paths 解析（支持 WUKONG_DATA_HOME）。
+# 这些模块级常量仍保留（测试用 monkeypatch 重定向写入点），但初值来自 paths，
+# 不再自己拼 ROOT / "data"。
+DATA = paths.data_dir()
 LIVE_DIR = DATA / "live"
-PANEL = DATA / "panel_raw.parquet"
+PANEL = paths.panel_raw_file()
 PAPER = DATA / "paper"
 STATE_FILE = PAPER / "sim_state.json"
 SNAPSHOT = PAPER / "live_sim.json"
@@ -1061,23 +1064,19 @@ def _minute_points(day: str, code: str | None,
         out = []
     if out:
         return sorted(out, key=lambda x: x["t"])
-    # 回落：当日 quotes 留档（5 分钟一帧）
+    # 回落：当日 quotes 留档（5 分钟一帧）——逐帧/合并归档统一读取
     try:
-        qdir = LIVE_DIR / str(day) / "quotes"
-        for f in sorted(qdir.glob("quotes_*.parquet")):
-            stem = f.stem.replace("quotes_", "")
-            if len(stem) == 6:
-                hhmm = f"{stem[:2]}:{stem[2:4]}"
-            elif len(stem) >= 14:
-                hhmm = f"{stem[8:10]}:{stem[10:12]}"
-            else:
-                continue
-            df = pl.read_parquet(f, columns=["ts_code", "price"])
-            r = df.filter(pl.col("ts_code") == c)
-            if r.height:
-                px = r["price"][0]
-                if px and px > 0:
-                    out.append({"t": hhmm, "price": float(px)})
+        frames = archive.read_frames(str(day), "quotes")
+        if frames is not None and frames.height:
+            cols = [x for x in ("frame", "ts_code", "price")
+                    if x in frames.columns]
+            sub = frames.select(cols).filter(pl.col("ts_code") == c)
+            for r in sub.iter_rows(named=True):
+                px = r.get("price")
+                stem = str(r.get("frame") or "")
+                if px and px > 0 and len(stem) == 6:
+                    out.append({"t": f"{stem[:2]}:{stem[2:4]}",
+                                "price": float(px)})
     except Exception:  # noqa: BLE001
         return []
     return sorted(out, key=lambda x: x["t"])
@@ -1339,18 +1338,14 @@ def settle(pos: dict[str, Any], daily: list[dict[str, Any]]) -> dict[str, Any]:
 # ---------------------------------------------------------------------------
 
 def read_frames(day: str) -> list[dict[str, Any]]:
-    f = LIVE_DIR / day / "pools" / "pools.jsonl"
-    if not f.is_file():
-        return []
-    out: list[dict[str, Any]] = []
-    for line in f.read_text(encoding="utf-8").splitlines():
-        if not line.strip():
-            continue
-        try:
-            out.append(json.loads(line))
-        except json.JSONDecodeError:
-            continue
-    return out
+    """读当日涨停池全部留档帧。
+
+    2026-11-25 瘦身：改走 `backend.archive`，明文的 `pools.jsonl` 与
+    盘后压缩的 `pools.jsonl.gz` 都能读；调用方无需感知形态。
+    """
+    from backend import archive
+    # 传入模块级 LIVE_DIR（测试会 monkeypatch 它指到临时目录），保持隔离语义。
+    return archive.read_pool_frames(day, root=LIVE_DIR)
 
 
 def load_daily(codes: list[str]) -> dict[str, list[dict[str, Any]]]:
@@ -2091,15 +2086,11 @@ def _orders_with_live_value(orders: list[dict[str, Any]], day: str
     未成交单（queued）按委托价估值、浮盈 0；已成交按 quotes 实时价。
     """
     import polars as _pl
-    from pathlib import Path as _P
 
     px_map: dict[str, float] = {}
     try:
-        qdir = (_P(__file__).resolve().parents[1] / "data" / "live"
-                / str(day) / "quotes")
-        snaps = sorted(qdir.glob("quotes_*.parquet"))
-        if snaps:
-            df = _pl.read_parquet(snaps[-1])
+        df = archive.latest_frame(str(day), "quotes")
+        if df is not None and df.height:
             for r in df.iter_rows(named=True):
                 c = str(r.get("ts_code") or "").zfill(6)
                 p = r.get("price")
@@ -2158,17 +2149,13 @@ def _account_snapshot(state: dict[str, Any], positions: list[dict[str, Any]],
       * 累计盈亏 = 已实现盈亏合计 + 当前持仓浮动盈亏
     """
     import polars as _pl
-    from pathlib import Path as _P
 
     # 盘中实时价：当日 quotes 最新帧
     px_map: dict[str, float] = {}
     px_stale = True
     try:
-        qdir = (_P(__file__).resolve().parents[1] / "data" / "live"
-                / str(day) / "quotes")
-        snaps = sorted(qdir.glob("quotes_*.parquet"))
-        if snaps:
-            df = _pl.read_parquet(snaps[-1])
+        df = archive.latest_frame(str(day), "quotes")
+        if df is not None and df.height:
             for r in df.iter_rows(named=True):
                 c = str(r.get("ts_code") or "").zfill(6)
                 p = r.get("price")

@@ -21,7 +21,8 @@ from reference_impl import (dt_flags as ref_dt, limit_pct as ref_limit,
 PANEL = None
 try:
     from backend import feeds  # noqa: F401
-    PANEL = feeds.ROOT / "data" / "panel_raw.parquet"
+    from backend import paths
+    PANEL = paths.panel_raw_file()
 except Exception:  # noqa: BLE001
     PANEL = None
 

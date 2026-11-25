@@ -55,7 +55,10 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-LIVE_DIR = ROOT / "data" / "live"
+# 数据与代码分离：留档根统一由 backend.paths 解析。
+from backend import archive, paths  # noqa: E402
+
+LIVE_DIR = paths.live_dir()
 
 EXTERNAL_RESEARCH: dict[str, Any] = {
     "verified_at": "2026-11-12",
@@ -188,11 +191,13 @@ def live_queue_book(day: str | None = None) -> dict[str, Any]:
     情绪闸门 + 题材内「一字兔 → 买其他二板」，无组合则不开仓。
     """
     day = day or datetime.now().strftime("%Y%m%d")
-    f = LIVE_DIR / day / "pools" / "pools.jsonl"
-    if not f.is_file():
-        return {"available": False, "reason": f"无 {f}"}
+    # 2026-11-25 瘦身：走 archive 抽象层（明文 JSONL / 盘后 gzip 都支持）。
+    # 传入模块级 LIVE_DIR（测试会 monkeypatch 它），保持隔离语义。
     try:
-        lines = f.read_text(encoding="utf-8").splitlines()
+        lines = archive.read_pool_lines(day, root=LIVE_DIR)
+        if not lines:
+            return {"available": False,
+                    "reason": f"无 {archive.pools_plain_path(day, LIVE_DIR)}（或压缩归档）"}
         frame = json.loads(lines[-1])
     except Exception as exc:  # noqa: BLE001
         return {"available": False, "reason": f"{type(exc).__name__}: {exc}"}

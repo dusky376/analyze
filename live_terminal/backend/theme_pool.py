@@ -788,7 +788,14 @@ AXIS_FILE = "theme_axis.yaml"
 
 
 def axis_path() -> Path:
-    return paths.data_dir().parent / "configs" / AXIS_FILE
+    """题材轴 yaml 的路径。
+
+    **配置属于代码，不属于数据**：数据目录可以整体搬走，但题材轴必须
+    跟着代码走。因此这里用 `paths.configs_dir()`（= live_terminal/configs），
+    不再用 `data_dir().parent / "configs"`——数据与代码分离后
+    data_dir() 已在项目根下，其 parent 不再是 live_terminal。
+    """
+    return paths.configs_dir() / AXIS_FILE
 
 
 def load_axis() -> dict[str, Any]:

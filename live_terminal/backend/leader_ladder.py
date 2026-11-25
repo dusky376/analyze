@@ -49,7 +49,10 @@ sys.path.insert(0, str(ROOT))
 
 from backend import feature_engine, feeds  # noqa: E402
 
-OUT = ROOT / "data" / "leader_ladder.json"
+# 数据与代码分离：输出文件落在数据根，不在代码目录。
+from backend import paths  # noqa: E402
+
+OUT = paths.data_dir() / "leader_ladder.json"
 
 WINDOW = 20
 MIN_RUN = 0.50            # 20 日窗口低点起涨幅

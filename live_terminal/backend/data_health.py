@@ -33,7 +33,10 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-LIVE = ROOT / "data" / "live"
+# 数据与代码分离：留档根统一由 backend.paths 解析。
+from backend import paths  # noqa: E402
+
+LIVE = paths.live_dir()
 
 #: 盘后阈值（本地时间）；15:05 之后应当已有当日涨停池留档。
 EOD_HHMM = (15, 5)
@@ -46,8 +49,11 @@ THEME_START = dtime(9, 25)
 
 
 def _has_pool(day: str) -> bool:
-    f = LIVE / day / "pools" / "pools.jsonl"
-    return f.is_file() and f.stat().st_size > 0
+    """当日涨停池留档是否存在（明文或压缩归档都算）。"""
+    from backend import archive
+    # 传入模块级 LIVE（测试会 monkeypatch 它指到临时目录），保持隔离语义。
+    p = archive.pools_path(day, root=LIVE)
+    return p is not None and p.stat().st_size > 0
 
 
 def _listed_days() -> list[str]:

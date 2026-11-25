@@ -32,7 +32,10 @@ from typing import Any
 import requests
 
 ROOT = Path(__file__).resolve().parents[1]
-STORE = ROOT / "data" / "intraday"
+# 数据与代码分离：分时落盘根统一由 backend.paths 解析。
+from backend import paths  # noqa: E402
+
+STORE = paths.data_dir() / "intraday"
 
 EM_TRENDS = "https://push2his.eastmoney.com/api/qt/stock/trends2/get"
 _UA = {"User-Agent": "Mozilla/5.0", "Referer": "https://quote.eastmoney.com/"}

@@ -48,7 +48,10 @@ from pathlib import Path
 from typing import Any
 
 ROOT = Path(__file__).resolve().parents[1]
-STORE = Path(os.environ.get("WUKONG_ICE_SAMPLES", ROOT / "data" / "ice_samples.json"))
+from backend import paths  # noqa: E402
+
+# 数据与代码分离：默认落在数据根；WUKONG_ICE_SAMPLES 可显式覆盖。
+STORE = Path(os.environ.get("WUKONG_ICE_SAMPLES", str(paths.data_dir() / "ice_samples.json")))
 
 #: 样本库结构版本
 STORE_VERSION = 2
