@@ -81,7 +81,12 @@ _lock = threading.Lock()
 
 STRATEGY = "B1 悟空真经·二板排板"
 ENTRY_RULE = "二板封板瞬间挂涨停价限价委托排队（不默认成交）"
-EXIT_RULE = "首个未涨停日（断板）当日收盘卖出；断板后不持有"
+# 2026-11-25 裁定：卖点按「买入日收盘是否仍炸板」分两条路径；盘中信号卖价
+# 仍处研究阶段（阈值未做样本外验证），时间与兜底价是当前实际执行口径。
+EXIT_RULE = (
+    "买入日收盘仍炸板→次日10:00前卖；买入日收盘封住→断板日收盘前卖；"
+    "盘中快跌≥2%/冲高回落≥3%信号优先（研究中），未触发按时间兜底"
+)
 
 # 成本单一口径（用户 2026-11-23 裁定）：万 0.84 免五，见 costs.DEFAULT。
 # 实际成本率由 costs.DEFAULT.round_trip_rate() 计算，不在此硬编码百分比。
@@ -256,7 +261,9 @@ def _backfill_size_fields(state: dict[str, Any]) -> int:
 CAVEATS: list[str] = [
     "委托单状态依据东财 Q037：涨停价委托，涨停打开且卖一有单才成交；不开板不成交。"
     "成交价取委托价（涨停价），队列位置按封单尾部，逐笔封板时刻不可得，以留档帧时刻近似。",
-    "「断板当日收盘卖出」以**真实日线收盘价**记账；实盘无法精确在收盘前成交，属收盘价近似，不是可复现的成交回报。",
+    "卖点口径（2026-11-25 裁定）：买入日收盘仍炸板→次日 10:00 前卖；买入日收盘封住→断板日收盘前卖。"
+    "盘中快跌≥2%/冲高回落≥3%信号优先（参数研究中、未做样本外验证）；未触发按时间边界兜底价。"
+    "历史回放仍按「断板当日收盘价」口径，与实盘账本不是同一卖法，不可直接对照。",
     "涨停池留档在 2026-11-13 中午前只保留按连板高度降序的 top-30，二板可能被截断；"
     "此后帧带全量 `all` 字段。历史截断帧已标注，不可回溯补全。",
     "停牌无日线行时静默跨日；若右端到最新日线仍连续涨停，标记 censored（右删失），不计盈亏。",
@@ -563,11 +570,14 @@ def advance_fills(state: dict[str, Any],
         if not oid.startswith(prefix):
             continue
         # 2026-11-24 用户裁定：矛盾单以精确模拟为准。
-        # 已标 filled 的单也要复核：若 queue_sim 明确说 queued_unfilled，
-        # 说明当初是二元判定（数据不全时）误判成交，必须以精确模拟纠正，
-        # 且不回退为已成交（避免每次 sync 又误标回去）。
+        # 2026-11-25 审计 P0 加固：只有**数据完整**的精确模拟（有封单额/成交额，
+        # 即 queue_sim 有 seal_fund_at_entry_yi）才能推翻 filled；
+        # 盘中数据不全造成的 unknown/假阴性不锁定，后续帧继续重判。
         prior_sim = o.get("queue_sim") or {}
-        if o.get("status") == "filled" and prior_sim.get("status") == "queued_unfilled":
+        sim_has_data = prior_sim.get("seal_fund_at_entry_yi") is not None
+        if (o.get("status") == "filled"
+                and prior_sim.get("status") == "queued_unfilled"
+                and sim_has_data):
             o.update(status="queued_unfilled",
                      fill_price=None, fill_frame_ts=None, fill_round=None,
                      fill_confidence="none",
@@ -1074,7 +1084,8 @@ def _minute_points(day: str, code: str | None,
 
 
 def _close_by_plan(pos: dict[str, Any], plan: dict[str, Any],
-                   decision: dict[str, Any]) -> dict[str, Any]:
+                   decision: dict[str, Any],
+                   daily: list[dict[str, Any]] | None = None) -> dict[str, Any]:
     """按 sell_plan 的决策价真正平仓（2026-11-25 用户要求及时显示卖出）。
 
     - 卖出价 = decision.price（信号价 / 时间兜底价）
@@ -1110,6 +1121,42 @@ def _close_by_plan(pos: dict[str, Any], plan: dict[str, Any],
     win = plan.get("window") or {}
     kind = decision.get("kind")  # signal / fallback
 
+    # 2026-11-25 审计 P2：盘中卖出曾硬编码 exit_blocked=False，抹掉跌停顺延事实。
+    # 这里不改卖出价（盘中信号/兜底价已定格），但把「卖出日是否跌停封死」
+    # 按真实日线如实留痕；日线未落盘则标 unknown，不再假装"未受阻"。
+    blocked: list[str] = []
+    break_ld: bool | None = None
+    daily_rows = daily or []
+    exit_date = str(win.get("date") or _cn_today_str())
+    exit_row = next((d for d in daily_rows
+                     if str(d.get("date")).replace("-", "") ==
+                     exit_date.replace("-", "")), None)
+    if exit_row is not None:
+        code = str(p.get("ts_code") or "") or None
+        idx = daily_rows.index(exit_row)
+        prev_close = None
+        if idx > 0:
+            try:
+                pv = float(daily_rows[idx - 1].get("close"))
+                prev_close = pv if pv > 0 else None
+            except (TypeError, ValueError):
+                pass
+        from backend import feature_engine as _fe
+        lim = None
+        if code:
+            try:
+                lim = float(_fe.limit_pct(code))
+            except Exception:  # noqa: BLE001
+                lim = None
+        break_ld = _is_limit_down(exit_row.get("close"), prev_close, lim)
+        if break_ld is True:
+            blocked = [str(exit_row["date"])]
+    blocked_note = (
+        "跌停日按盘中信号价卖出（无逐笔承接保证）" if blocked else
+        "卖出日跌停状态不可判定（日线未落盘）" if break_ld is None else
+        "卖出日非跌停，正常成交"
+    )
+
     p.update({
         "status": "closed",
         "exit_date": str(win.get("date") or _cn_today_str()),
@@ -1135,15 +1182,17 @@ def _close_by_plan(pos: dict[str, Any], plan: dict[str, Any],
         "state_note": (f"按卖出规则平仓：{decision.get('reason')}"),
         # 与 settle() 保持字段一致（历史消费者/测试依赖）
         "board_days": 0,
-        "exit_blocked": False,
-        "exit_blocked_days": 0,
-        "exit_blocked_dates": [],
+        "exit_blocked": bool(blocked),
+        "exit_blocked_days": len(blocked),
+        "exit_blocked_dates": list(blocked),
+        "exit_blocked_note": blocked_note,
         "last_checked": datetime.now().strftime("%Y-%m-%d"),
-        # 卖法对照/环境分组需要的上下文（2026-11-25）：
-        # 这些票是「买入日收盘仍炸板」→ 次日信号卖出，断板性质=未封住。
-        "break_is_limit_down": False,
+        # 卖法对照/环境分组：按卖出日真实日线判定跌停，未知则留 None。
+        "break_is_limit_down": break_ld,
         "exit_env": {
-            "rule": "broke_and_stayed_intraday_sell",
+            "rule": ("broke_and_stayed_intraday_sell"
+                     if plan.get("entry_kind") == "broke_and_stayed"
+                     else "sealed_intraday_sell"),
             "signal_time": decision.get("signal_time"),
             "signal_kind": kind,
         },
@@ -1185,7 +1234,7 @@ def settle(pos: dict[str, Any], daily: list[dict[str, Any]]) -> dict[str, Any]:
     _win = (_plan.get("window") or {}) if _plan.get("available") else {}
     if (_dec.get("action") == "sell" and _dec.get("price")
             and _win.get("intraday")):
-        return _close_by_plan(p, _plan, _dec)
+        return _close_by_plan(p, _plan, _dec, daily)
 
     exit_row, status = find_exit(str(p["entry_date"]), daily, code=code)
     p["last_checked"] = datetime.now().strftime("%Y-%m-%d")
@@ -2165,7 +2214,11 @@ def _account_snapshot(state: dict[str, Any], positions: list[dict[str, Any]],
             pnl = float(nr) * amt
             realized += pnl
             n_closed += 1
-            if str(t.get("entry_date")) == str(day):
+            # 2026-11-25 修复（审计 P0）：「今日实现盈亏」应按**卖出日**判定，
+            # 不是买入日。T+1 下当天买入不可能当天卖出，用 entry_date 会让
+            # 当日平仓的收益全部漏计（11-25 实测 20 笔 −23,145 显示成 0）。
+            exit_d = str(t.get("exit_date") or "").replace("-", "")
+            if exit_d == str(day).replace("-", ""):
                 today_realized += pnl
 
     capital = CAPITAL_YUAN

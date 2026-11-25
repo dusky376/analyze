@@ -225,7 +225,7 @@ def api_health() -> Response:
 # ---------------------------------------------------------------------------
 @app.get("/api/live-sim")
 def api_live_sim() -> Response:
-    """B1 实时模拟账本：二板涨停瞬间排板 → 断板当日收盘卖。"""
+    """B1 实时模拟账本：二板涨停瞬间排板 → 按 11-25 两路径卖点规则卖出。"""
     return api_guard(lambda: cached_copy("live_sim", 60.0, live_sim.sync))
 
 

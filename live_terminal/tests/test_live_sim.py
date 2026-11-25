@@ -232,6 +232,55 @@ def test_settle_refuses_bad_price() -> None:
     assert out["status"] == "holding" and "拒绝结算" in out["state_note"]
 
 
+# --- 账户面板：今日盈亏归属日（审计 P0，2026-11-25） -------------------------
+
+def test_account_today_realized_attributed_to_exit_date() -> None:
+    """今日实现盈亏按**卖出日**归属，不是买入日。
+
+    T+1 下当天买入不可能当天卖出。旧实现用 `entry_date == day` 判定，
+    导致「昨日买入、今日平仓」的全部收益漏计——2026-11-25 实测
+    20 笔平仓净亏 -23,145，面板却显示 today_pnl = 0。
+    这里用构造账本锁定正确语义，避免再次回归。
+    """
+    day = "20261125"
+    state = {
+        "trades": [
+            # 昨日买入 / 今日卖出 → 应计入今日
+            {"entry_date": "20261124", "exit_date": "20261125",
+             "net_return": -0.05, "notional": 100_000.0},
+            # 今日买入 / 未来卖出 → 不应计入今日
+            {"entry_date": "20261125", "exit_date": "20261126",
+             "net_return": 0.10, "notional": 100_000.0},
+            # 更早平仓 → 只进累计，不进今日
+            {"entry_date": "20261113", "exit_date": "2026-11-20",
+             "net_return": 0.08, "notional": 100_000.0},
+        ]
+    }
+    # 空持仓 → 不依赖 quotes 留档，today_float 必为 0
+    out = live_sim._account_snapshot(state, [], day)
+    assert out["today_realized"] == pytest.approx(-5_000.0)
+    assert out["today_float"] == 0.0
+    assert out["today_pnl"] == pytest.approx(-5_000.0)
+    # 累计实现盈亏仍包含全部三笔（不受归属日改动影响）
+    assert out["realized_pnl"] == pytest.approx(-5_000.0 + 10_000.0 + 8_000.0)
+
+    # exit_date 带横线也要能识别（历史账本两种格式并存）
+    state["trades"][0]["exit_date"] = "2026-11-25"
+    out2 = live_sim._account_snapshot(state, [], day)
+    assert out2["today_realized"] == pytest.approx(-5_000.0)
+
+
+def test_account_today_realized_zero_when_no_exit_today() -> None:
+    """当日没有平仓时 today_realized 必须为 0（防止误用 entry_date 反向误计）。"""
+    state = {"trades": [
+        {"entry_date": "20261124", "exit_date": "20261125",
+         "net_return": -0.05, "notional": 100_000.0},
+    ]}
+    out = live_sim._account_snapshot(state, [], "20261126")
+    assert out["today_realized"] == 0.0
+    assert out["today_pnl"] == 0.0
+
+
 # --- sync 端到端（幂等 / 单向迁移 / 无数据不编造） ----------------------------
 
 def test_sync_idempotent_and_no_fake_data(isolated) -> None:
