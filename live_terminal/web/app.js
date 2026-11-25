@@ -158,12 +158,29 @@ function renderLiveSim(d) {
 
   $("#todayMeta").textContent =
     `${fmtDay(day)} · 涨停池帧 ${fmtInt(d.frames)} · 今日委托 ${fmtInt(nToday)} · 已成交 ${fmtInt(nFilled)}`;
+  // 2026-11-25：两张表都会重绘。先把展开状态存起来，等两张表都重绘完再统一恢复，
+  // 避免 renderTodayOrders 恢复后被 renderPositions 的 close 关掉（或反之）。
+  const savedCode = (typeof inlineChart !== "undefined" && inlineChart.code) || null;
+  const savedTab = (typeof inlineChart !== "undefined" && inlineChart.tab) || "kline";
+  if (typeof closeInlineChart === "function") closeInlineChart();
   renderTodayOrders(d.today_orders || [], day);
   renderPairs(d.pairs, day);
   renderPositions(d);
   renderAccount(d);
   renderCost(d);
   renderEmotion(d.ice, d.emotion);
+  // 统一恢复：优先在今天委托表找，其次在账本表找
+  if (savedCode) {
+    const allRows = Array.from(document.querySelectorAll("tr.chart-row"));
+    const prev = allRows.find(tr => String(tr.getAttribute("data-code")) === String(savedCode));
+    if (prev) {
+      toggleInlineChart(prev, savedCode, prev.getAttribute("data-name"));
+      if (savedTab === "intraday") {
+        const tabBtn = prev.nextElementSibling?.querySelector('.chart-tab[data-tab="intraday"]');
+        if (tabBtn) tabBtn.click();
+      }
+    }
+  }
   $("#footerMeta").textContent =
     `账本生成 ${d.generated_at || "—"} · ${d.strategy || ""} · 快照源 ${d.source || "sync"}`;
 }
@@ -225,16 +242,11 @@ function renderTodayOrders(rows, day) {
     body.innerHTML = `<tr><td colspan="9" class="empty">${esc(fmtDay(day))} 无排板委托 —— 当日策略未开仓，不回退展示历史单。</td></tr>`;
     return;
   }
-  // 记住当前展开的股票，重建表格后恢复（60 秒轮询会重绘表格）
-  const openCode = (typeof inlineChart !== "undefined" && inlineChart.code) || null;
-  const openTab = (typeof inlineChart !== "undefined" && inlineChart.tab) || "kline";
-  if (typeof closeInlineChart === "function") closeInlineChart();
-
+  // 展开状态由 loadAll 统一保存/恢复（两张表都会重绘，避免互相覆盖）
   body.innerHTML = rows.map((o) => {
     const g = o.guitu || {};
     const reason = o.fill_reason || o.state_note || (o.queue_sim && o.queue_sim.detail) || "—";
-    const sel = openCode && String(o.ts_code) === String(openCode) ? " selected" : "";
-    return `<tr class="chart-row${sel}" data-code="${esc(o.ts_code)}" data-name="${esc(o.name)}" title="点击查看该股 K 线 + 分时">
+    return `<tr class="chart-row" data-code="${esc(o.ts_code)}" data-name="${esc(o.name)}" title="点击查看该股 K 线 + 分时">
       <td><div class="name">${esc(o.name || "—")}</div><div class="code">${esc(o.ts_code || "")}</div></td>
       <td>${esc(o.guitu_theme || o.industry || g.industry || "—")}${
         o.guitu_theme && o.industry ? `<div class="code">${esc(o.industry)}</div>` : ""}</td>
@@ -258,18 +270,6 @@ function renderTodayOrders(rows, day) {
       if (code) toggleInlineChart(tr, code, name);
     });
   });
-  // 恢复轮询前展开的那只股票
-  if (openCode) {
-    const prev = Array.from(body.querySelectorAll("tr.chart-row"))
-      .find(tr => String(tr.getAttribute("data-code")) === String(openCode));
-    if (prev) {
-      toggleInlineChart(prev, openCode, prev.getAttribute("data-name"));
-      if (openTab === "intraday") {
-        const tabBtn = prev.nextElementSibling?.querySelector('.chart-tab[data-tab="intraday"]');
-        if (tabBtn) tabBtn.click();
-      }
-    }
-  }
 }
 
 
@@ -553,22 +553,33 @@ function renderPairs(pairs, day) {
 
 function renderPositions(d) {
   const body = $("#posBody");
+  // 展开状态由 loadAll 统一保存/恢复（两张表都会重绘，避免互相覆盖）
   const rows = [...(d.positions || [])].sort((a, b) =>
     String(b.entry_date || "").localeCompare(String(a.entry_date || "")));
   if (!rows.length) {
     body.innerHTML = `<tr><td colspan="8" class="empty">暂无持仓或已结算记录。</td></tr>`;
     return;
   }
-  body.innerHTML = rows.slice(0, 80).map((p) => `<tr>
-    <td><div class="name">${esc(p.name || "—")}</div><div class="code">${esc(p.ts_code || "")}</div></td>
-    <td>${esc(fmtDay(p.entry_date))}</td>
-    <td>${statusTag(p.status)}</td>
-    <td class="num">${fmtNum(p.entry_price)}</td>
-    <td class="num">${esc(fmtDay(p.exit_date))}</td>
-    <td class="num">${fmtNum(p.exit_price)}</td>
-    <td class="num ${cls(p.gross_return)}">${fmtPct(p.gross_return)}</td>
-    <td class="num ${cls(p.r_net)}">${fmtPct(p.r_net)}</td>
-  </tr>`).join("");
+  body.innerHTML = rows.slice(0, 80).map((p) => {
+    // 2026-11-25：账本表每行也可点击展开 K 线 / 分时（与今日委托表一致）
+    return `<tr class="chart-row" data-code="${esc(p.ts_code)}" data-name="${esc(p.name)}" title="点击查看该股 K 线 + 分时">
+      <td><div class="name">${esc(p.name || "—")}</div><div class="code">${esc(p.ts_code || "")}</div></td>
+      <td>${esc(fmtDay(p.entry_date))}</td>
+      <td>${statusTag(p.status)}</td>
+      <td class="num">${fmtNum(p.entry_price)}</td>
+      <td class="num">${esc(fmtDay(p.exit_date))}</td>
+      <td class="num">${fmtNum(p.exit_price)}</td>
+      <td class="num ${cls(p.gross_return)}">${fmtPct(p.gross_return)}</td>
+      <td class="num ${cls(p.r_net)}">${fmtPct(p.r_net)}</td>
+    </tr>`;
+  }).join("");
+  body.querySelectorAll("tr.chart-row").forEach((tr) => {
+    tr.addEventListener("click", () => {
+      const code = tr.getAttribute("data-code");
+      const name = tr.getAttribute("data-name");
+      if (code) toggleInlineChart(tr, code, name);
+    });
+  });
 }
 
 // 交易软件式账户面板（用户 2026-11-24 要求）：总金额/可用/持仓/当日盈亏。

@@ -55,6 +55,13 @@ LEVEL_ORDER: tuple[str, ...] = ("L0", "L1", "L2", "L3", "L4", "L5")
 #: 冰点硬旁路：跌停家数达到此值直接判冰（v3.1 原判据的一部分）
 ICE_LIMIT_DOWN_ABS = 40
 
+#: 2026-11-25 用户裁定新增：**普跌旁路**。
+#: 背景：11-25 全市场 4614 跌 / 830 涨（下跌占比 84.75%），但跌停仅 11 家，
+#: v3.1 判据 `(S>=L4 且 >=2维>=L3) 或 跌停>=40` 判成「非冰点 → 正常仓位」，
+#: 导致照常满仓买入 20 只票、当日集体跳水。
+#: 「普跌但无恐慌跌停」也是弱势，必须降仓。下跌占比 >= 此值即判冰点。
+ICE_DOWN_SHARE_ABS = 0.80
+
 #: 仓位系数（用户 2026-11-23 裁定：冰点小仓试错，不绝对空仓）
 SIZE_FACTOR: dict[str, float] = {"L5": 0.30, "L4": 0.50}
 SIZE_FACTOR_DEFAULT = 1.00
@@ -133,14 +140,21 @@ def severity(dims: dict[str, str | None]) -> str | None:
 
 
 def is_ice(rec: dict[str, Any], dims: dict[str, str | None] | None = None) -> bool:
-    """**唯一冰点判据**（v3.1）：`S>=L4 且 ≥2 维>=L3`，或 `跌停>=40`。"""
+    """**唯一冰点判据**：v3.1 三维确认 + 2026-11-25 普跌旁路。
+
+        is_ice = (S>=L4 且 ≥2 维>=L3) 或 跌停>=40 或 **下跌占比>=80%**
+
+    普跌旁路（用户 2026-11-25 裁定）：11-25 全市场 85% 下跌但跌停仅 11 家，
+    原判据漏判为「非冰点」。普跌同样要降仓，不能只看恐慌跌停。
+    """
     d = dims if dims is not None else dim_levels(rec)
     s = severity(d)
     n_ge3 = sum(1 for v in d.values()
                 if v in LEVEL_ORDER and LEVEL_ORDER.index(v) >= 3)
     by_multi = bool(s and LEVEL_ORDER.index(s) >= 4 and n_ge3 >= 2)
     by_abs = (_finite(rec.get("limit_down_n")) or 0) >= ICE_LIMIT_DOWN_ABS
-    return by_multi or by_abs
+    by_breadth = (_finite(rec.get("down_share")) or 0) >= ICE_DOWN_SHARE_ABS
+    return by_multi or by_abs or by_breadth
 
 
 def size_factor(level: str | None, ice: bool) -> float:
@@ -501,13 +515,18 @@ def assess(day: str, *, panel: pl.DataFrame | None = None,
                     if v in LEVEL_ORDER and LEVEL_ORDER.index(v) >= 3)
         by_multi = bool(s and LEVEL_ORDER.index(s) >= 4 and n_ge3 >= 2)
         by_abs = (_finite(rec.get("limit_down_n")) or 0) >= ICE_LIMIT_DOWN_ABS
-        itype = ("both" if (by_multi and by_abs)
+        by_breadth = (_finite(rec.get("down_share")) or 0) >= ICE_DOWN_SHARE_ABS
+        itype = ("both" if (by_multi and (by_abs or by_breadth))
                  else "multi_dim" if by_multi
-                 else "abs_limit_down" if by_abs else None)
+                 else "abs_limit_down" if by_abs
+                 else "broad_decline" if by_breadth else None)
         if by_multi:
             reasons.append(f"多维确认：S={s} 且 {n_ge3} 维≥L3")
         if by_abs:
             reasons.append(f"跌停 {rec['limit_down_n']} 家 ≥ {ICE_LIMIT_DOWN_ABS}")
+        if by_breadth:
+            reasons.append(f"普跌：下跌占比 {_finite(rec.get('down_share')):.1%} "
+                           f"≥ {ICE_DOWN_SHARE_ABS:.0%}（2026-11-25 新增旁路）")
 
     # 用户裁定 B：命中即新增样本并参与校准（persist=True 时才写）
     sample_info: dict[str, Any] = {"persisted": False}

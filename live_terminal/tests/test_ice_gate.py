@@ -64,6 +64,29 @@ def test_absolute_bypass_40():
     assert IG.is_ice(rec, dims) is True              # 跌停>=40 直接判冰
 
 
+def test_broad_decline_bypass_20261125():
+    """2026-11-25 用户裁定：普跌(下跌占比>=80%)也判冰，即使跌停家数不足40。
+
+    实测 11-25：下跌占比 87.37%、跌停 28 家 → v3.1 判非冰点（漏判）。
+    """
+    rec = {"limit_down_n": 28, "down_share": 0.8737,
+           "dt_ratio": 0.32, "broken_hi_n": 3}
+    dims = {"down_share": "L4", "limit_down_n": "L3",
+            "dt_ratio": "L2", "broken_hi_n": "L0"}
+    # 旧判据：S=L4 但只有 1 维 >=L3，且跌停 28<40 → False
+    assert IG.ICE_DOWN_SHARE_ABS == 0.80
+    assert IG.is_ice(rec, dims) is True              # 新旁路必须判冰
+
+
+def test_broad_decline_does_not_over_trigger():
+    """下跌占比 79%（<80%）不触发普跌旁路。"""
+    rec = {"limit_down_n": 5, "down_share": 0.79,
+           "dt_ratio": 0.1, "broken_hi_n": 0}
+    dims = {"down_share": "L2", "limit_down_n": "L0",
+            "dt_ratio": "L0", "broken_hi_n": "L0"}
+    assert IG.is_ice(rec, dims) is False
+
+
 # ---------------------------------------------------------------------------
 # 仓位系数（用户裁定：冰点小仓试错，不绝对空仓）
 # ---------------------------------------------------------------------------
