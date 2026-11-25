@@ -281,6 +281,44 @@ def test_account_today_realized_zero_when_no_exit_today() -> None:
     assert out["today_pnl"] == 0.0
 
 
+# --- 盘中平仓：跌停顺延留痕（审计 P2） --------------------------------------
+
+def test_close_by_plan_records_limit_down_from_daily() -> None:
+    """盘中信号卖出也须按真实日线留痕卖出日跌停状态，不再硬编码 False。"""
+    pos = {"ts_code": "000001", "entry_price": 10.0, "qty": 1000,
+           "notional": 10_000.0, "status": "holding"}
+    plan = {"entry_kind": "broke_and_stayed",
+            "window": {"date": "20261125", "intraday": True}}
+    dec = {"action": "sell", "price": 9.0, "kind": "signal",
+           "reason": "测试快跌信号"}
+    # 卖出日跌停：前收 10.0、跌停价 9.0 → 收盘 9.0 触及跌停
+    daily = [{"date": "20261124", "close": 10.0, "zt": True},
+             {"date": "20261125", "close": 9.0, "zt": False}]
+    out = live_sim._close_by_plan(pos, plan, dec, daily)
+    assert out["status"] == "closed"
+    assert out["break_is_limit_down"] is True
+    assert out["exit_blocked"] is True
+    assert out["exit_blocked_days"] == 1
+    assert out["exit_blocked_dates"] == ["20261125"]
+    assert "跌停" in out["exit_blocked_note"]
+    # 卖出价不被改写（仍是信号价）
+    assert out["exit_price"] == 9.0
+
+
+def test_close_by_plan_unknown_limit_down_without_daily() -> None:
+    """日线未落盘 → 跌停状态留 None，不再假装"未受阻"。"""
+    pos = {"ts_code": "000001", "entry_price": 10.0, "qty": 1000,
+           "notional": 10_000.0, "status": "holding"}
+    plan = {"entry_kind": "sealed",
+            "window": {"date": "20261125", "intraday": True}}
+    dec = {"action": "sell", "price": 9.5, "kind": "fallback", "reason": "兜底"}
+    out = live_sim._close_by_plan(pos, plan, dec, [])
+    assert out["break_is_limit_down"] is None
+    assert out["exit_blocked"] is False
+    assert "不可判定" in out["exit_blocked_note"]
+    assert out["exit_env"]["rule"] == "sealed_intraday_sell"
+
+
 # --- sync 端到端（幂等 / 单向迁移 / 无数据不编造） ----------------------------
 
 def test_sync_idempotent_and_no_fake_data(isolated) -> None:
