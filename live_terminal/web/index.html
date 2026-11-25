@@ -72,13 +72,15 @@
     <div class="table-wrap">
       <table>
         <thead><tr>
-          <th>代码 / 名称</th><th>题材</th><th>龟兔角色</th><th>挂单时刻</th>
+          <th>代码 / 名称</th><th>题材</th><th>龟兔角色</th>
+          <th class="num" title="封板瞬间换手率 + 封板质量分级（仅观察，不参与选股）">封板质量</th>
+          <th>挂单时刻</th>
           <th class="num">委托价</th><th class="num">数量</th>
           <th class="num" title="本笔预算 = 100万×10%×冰点系数（L5=0.3 / L4=0.5）">预算</th>
           <th class="num" title="持有价值=实时价×数量；括号为浮盈">持有价值</th>
           <th>状态</th><th>成交/原因</th>
         </tr></thead>
-        <tbody id="todayBody"><tr><td colspan="10" class="empty">载入中…</td></tr></tbody>
+        <tbody id="todayBody"><tr><td colspan="11" class="empty">载入中…</td></tr></tbody>
       </table>
     </div>
     <p class="muted" style="font-size:11px;margin-top:6px">💡 点击任意股票行，在该行下方展开 K 线 / 分时（可切换、可关闭）</p>

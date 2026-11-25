@@ -203,6 +203,22 @@ function valueCell(o) {
   </td>`;
 }
 
+// 封板质量（用户 2026-11-25 提出换手率考量）：只观察，不参与选股。
+// 实证：首帧换手≤3% 封住率80.6%、≤5% 65.2%、>12% 仅20%；首封≤09:30 封住率88.9%
+function sealQualityCell(o) {
+  const q = o.seal_quality;
+  if (!q || q === "unknown") {
+    return `<td class="num muted" title="${esc(o.seal_quality_basis || "")}">—</td>`;
+  }
+  const map = { good: ["turtle", "优"], ok: ["unfilled", "中"], weak: ["rabbit", "弱"] };
+  const [cls2, label] = map[q] || ["unknown", q];
+  const tv = has(o.turn_at_seal) ? `${Number(o.turn_at_seal).toFixed(2)}%` : "—";
+  return `<td class="num" title="${esc(o.seal_quality_note || "")} ｜ ${esc(o.seal_quality_basis || "")}">
+    <span class="tag ${cls2}">${label}</span>
+    <div class="code">换手 ${tv}</div>
+  </td>`;
+}
+
 function renderTodayOrders(rows, day) {
   const body = $("#todayBody");
   if (!rows.length) {
@@ -223,6 +239,7 @@ function renderTodayOrders(rows, day) {
       <td>${esc(o.guitu_theme || o.industry || g.industry || "—")}${
         o.guitu_theme && o.industry ? `<div class="code">${esc(o.industry)}</div>` : ""}</td>
       <td>${roleTag(g.role, g.role_cn)}</td>
+      ${sealQualityCell(o)}
       <td>${esc(fmtTs(o.entry_frame_ts))}</td>
       <td class="num">${fmtNum(o.entry_price)}</td>
       <td class="num">${fmtInt(o.qty)}</td>
@@ -281,7 +298,7 @@ function toggleInlineChart(tr, code, name) {
 
   const detail = document.createElement("tr");
   detail.className = "chart-detail-row";
-  detail.innerHTML = `<td colspan="10">
+  detail.innerHTML = `<td colspan="11">
     <div class="chart-inline">
       <div class="chart-inline-head">
         <b>${esc(name || code)}（${esc(code)}）· 走势</b>

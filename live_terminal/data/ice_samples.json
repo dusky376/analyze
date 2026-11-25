@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "updated_at": "2026-11-25T12:14:31",
+  "updated_at": "2026-11-25T13:45:39",
   "feature_note": null,
   "seeds": [
     {
@@ -1119,7 +1119,7 @@
       "is_ice": true,
       "ice_type": "both",
       "size_factor": 0.5,
-      "detected_at": "2026-11-25T12:14:31",
+      "detected_at": "2026-11-25T13:45:39",
       "source": "auto"
     },
     "2026-11-17": {
@@ -7097,7 +7097,7 @@
       "is_ice": true,
       "ice_type": "both",
       "size_factor": 0.5,
-      "detected_at": "2026-11-25T12:14:31",
+      "detected_at": "2026-11-25T13:45:39",
       "source": "auto"
     },
     "2026-11-17": {
@@ -7223,25 +7223,25 @@
     "2026-11-24": {
       "date": "2026-11-24",
       "metrics": {
-        "down_share": 0.3333,
-        "limit_down_n": 0,
-        "limit_up_n": 2,
-        "dt_ratio": 0.0,
-        "broken_hi_n": 0,
-        "up": 2,
-        "down": 1
+        "down_share": 0.6417,
+        "limit_down_n": 4,
+        "limit_up_n": 63,
+        "dt_ratio": 0.0635,
+        "broken_hi_n": 2,
+        "up": 1952,
+        "down": 3496
       },
       "dim_levels": {
-        "down_share": "L0",
+        "down_share": "L1",
         "limit_down_n": "L0",
         "dt_ratio": "L0",
         "broken_hi_n": "L0"
       },
-      "severity_level": "L0",
+      "severity_level": "L1",
       "is_ice": false,
       "ice_type": null,
       "size_factor": 1.0,
-      "detected_at": "2026-11-24T09:56:30",
+      "detected_at": "2026-11-25T13:44:46",
       "source": "auto"
     }
   },

@@ -360,6 +360,57 @@ def collect_two_board(frames: list[dict[str, Any]]) -> tuple[dict[str, dict[str,
     return out, notes
 
 
+#: 换手率过滤的观察阈值（2026-11-25 实证研究得出，**仅用于分级展示，不参与选股**）。
+#: 依据：首帧换手 ≤3% 封住率 80.6%、≤5% 65.2%、>12% 仅 20%（77 样本/6 日）。
+SEAL_TURNOVER_GOOD = 3.0      # 优：封住率 80%+
+SEAL_TURNOVER_OK = 8.0        # 中：封住率 50-65%
+SEAL_FIRST_SEAL_GOOD = 93000  # 首封 ≤09:30 封住率 88.9%
+
+
+def _seal_quality_fields(first: dict[str, Any], g: dict[str, Any]
+                         ) -> dict[str, Any]:
+    """封板质量观察字段（只读分级，不参与选股/成交判定）。
+
+    2026-11-25 用户提出用换手率提高「封住不开板」概率。实证（77 样本）
+    显示首帧换手率与封住率强相关，但样本量不足以改策略，故先只展示：
+      turn_at_seal  封板瞬间换手（首帧可得，**不是**未来函数）
+      seal_quality  good / ok / weak（按换手 + 首封时刻综合）
+    """
+    tv = first.get("turnover")
+    try:
+        tvf = float(tv) if tv is not None else None
+    except (TypeError, ValueError):
+        tvf = None
+    fs = guitu_roles._hhmmss(first.get("first_seal"))
+    reasons = []
+    if tvf is None:
+        quality = "unknown"
+        reasons.append("缺换手率")
+    elif tvf <= SEAL_TURNOVER_GOOD:
+        quality = "good"
+    elif tvf <= SEAL_TURNOVER_OK:
+        quality = "ok"
+    else:
+        quality = "weak"
+    if tvf is not None:
+        reasons.append(f"首帧换手 {tvf:.2f}%")
+    if fs is not None:
+        early = fs <= SEAL_FIRST_SEAL_GOOD
+        reasons.append(f"首封 {str(int(fs)).zfill(6)[:2]}:{str(int(fs)).zfill(6)[2:4]}"
+                       + ("（早盘）" if early else "（非早盘）"))
+        if quality == "good" and not early:
+            quality = "ok"          # 换手好但封得晚 → 降一档
+    return {
+        "turn_at_seal": round(tvf, 4) if tvf is not None else None,
+        "first_seal_hhmmss": int(fs) if fs is not None else None,
+        "seal_quality": quality,
+        "seal_quality_note": " · ".join(reasons) or "无可用字段",
+        "seal_quality_basis": ("实证观察值（77 样本/6 日）：换手≤3% 封住率 80.6%、"
+                               "≤5% 65.2%、>12% 仅 20%；首封≤09:30 封住率 88.9%。"
+                               "**仅展示，不参与选股过滤**，样本不足以调参上线。"),
+    }
+
+
 def build_order(day: str, code: str, g: dict[str, Any], *,
                 size_factor: float = 1.0,
                 size_yuan: float | None = None) -> dict[str, Any]:
@@ -458,6 +509,11 @@ def build_order(day: str, code: str, g: dict[str, Any], *,
         "status": status,
         "guitu": guitu_roles.classify_role(role_row),
         "n_frames": g["n_frames"],
+        # 2026-11-25 用户提出「买点加换手率考量以提高封板不开板概率」。
+        # 先做**只读监控**（不参与选股/过滤，避免 77 样本就改策略）：
+        # turn_at_seal = 首次封板帧的换手（事前可得，非未来函数）
+        # seal_quality = 按实证阈值给的分级，仅作观察
+        **_seal_quality_fields(first, g),
         # 事后复盘证据（不参与成交判定）
         "broken_max": g["broken_max"],
         # 挂单时刻的开板数 = 逐帧推进的起点
@@ -1742,6 +1798,12 @@ def sync(day: str | None = None, *, frames: list[dict[str, Any]] | None = None,
                 # 旧单缺这两个字段时也能补上，不改成交判定。
                 cur["guitu_theme"] = new.get("guitu_theme")
                 cur["guitu_rabbits"] = new.get("guitu_rabbits")
+                # 封板质量观察字段（2026-11-25 新增）：旧单缺字段时补上，
+                # 只做展示，不参与选股/成交判定。
+                for _k in ("turn_at_seal", "first_seal_hhmmss", "seal_quality",
+                           "seal_quality_note", "seal_quality_basis"):
+                    if _k in new:
+                        cur[_k] = new[_k]
                 cur["queue"] = new["queue"] if cur["status"] != "filled" else cur["queue"]
                 # 挂单起点只在首次生成时固化，后续帧不得覆盖（否则又是未来信息）
                 cur["broken_at_entry"] = cur.get("broken_at_entry",
@@ -1910,6 +1972,16 @@ def _orders_with_live_value(orders: list[dict[str, Any]], day: str
     out = []
     for o in orders:
         row = dict(o)
+        # 2026-11-25：封板质量观察字段——旧单（改造前建仓）没有这两个
+        # 字段时，用已有的 turnover / first_seal 现算一份补上（只读展示）。
+        if "seal_quality" not in row:
+            try:
+                row.update(_seal_quality_fields(
+                    {"turnover": row.get("turnover"),
+                     "first_seal": row.get("first_seal_hhmmss")
+                                   or row.get("first_seal")}, row))
+            except Exception:  # noqa: BLE001
+                pass
         code = str(o.get("ts_code") or "").zfill(6)
         qty = int(o.get("qty") or 0)
         entry = float(o.get("entry_price") or 0.0)
