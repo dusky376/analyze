@@ -36,9 +36,10 @@ from typing import Any, Callable
 import polars as pl
 from flask import Flask, Response, jsonify, request, send_from_directory
 
-from backend import (charts, data_health, exit_alternatives, feeds, guitu_backtest,
-                     guitu_cases, ice_samples, leader_ladder, live_sim, market_clock,
-                     queue_match, recorder)
+from backend import (buy_signals, charts, data_health, evolution,
+                     exit_alternatives, feeds, guitu_backtest, guitu_cases,
+                     ice_samples, leader_ladder, live_sim, market_clock,
+                     minute_flow, queue_match, recorder)
 from backend import paths
 from backend.json_safe import sanitize
 
@@ -93,15 +94,9 @@ def cached_copy(key: str, ttl: float, fn: Callable[[], Any]) -> Any:
 
 
 def clear_cache() -> None:
-    """清空所有层级的缓存。
-
-    2026-11-23 审计：旧实现只清 `_cache`，`ice_gate._METRICS_CACHE`、
-    `live_sim._GATE_CACHE`、`feeds` 的 panel 缓存、`fill_verify._AMT_CACHE`
-    都残留 → `/api/refresh` 并不能真正"刷新"，会继续用旧的全市场扫描结果。
-    """
+    """清空所有层级的缓存（修复旧版 _PANEL_MEM 大小写错误导致刷新失效的问题）。"""
     with _lock:
         _cache.clear()
-    # 各模块的进程级缓存（尽力清，缺属性则跳过，不阻塞刷新）
     try:
         from backend import ice_gate
         ice_gate._METRICS_CACHE = None
@@ -112,10 +107,11 @@ def clear_cache() -> None:
     except Exception:  # noqa: BLE001
         pass
     try:
-        from backend import feeds
-        for name in ("_PANEL_MEM", "_CAL_DAYS", "_PANEL_CACHE"):
-            if hasattr(feeds, name):
-                setattr(feeds, name, None)
+        feeds.clear_caches()
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        minute_flow.clear_caches()
     except Exception:  # noqa: BLE001
         pass
     try:
@@ -227,10 +223,52 @@ def api_health() -> Response:
 # ---------------------------------------------------------------------------
 # 悟空真经三个数据出口
 # ---------------------------------------------------------------------------
+def _live_sim_enriched() -> dict[str, Any]:
+    """执行 live_sim.sync() 并无损附加买点质量评分与新鲜度元数据（不改账本）。"""
+    d = live_sim.sync()
+    if isinstance(d, dict):
+        # 为今日委托只读附加买点质量分级（A/B/C/REJECT + 撤单预警）
+        orders = d.get("today_orders") or []
+        for o in orders:
+            if not isinstance(o, dict):
+                continue
+            rabbits = o.get("guitu_rabbits") or []
+            qsim = o.get("queue_sim") or {}
+            o["buy_quality"] = buy_signals.evaluate_turtle_quality(
+                o,
+                rabbit_count=len(rabbits) if isinstance(rabbits, list) else 1,
+                peak_seal_yi=qsim.get("seal_fund_at_entry_yi"),
+                current_seal_yi=qsim.get("queue_left_yi"),
+            )
+        mkt = market_clock.trading_state("CN")
+        d["freshness"] = {
+            "server_time": datetime.now().isoformat(timespec="seconds"),
+            "generated_at": d.get("generated_at"),
+            "market_trading": bool(mkt.get("trading")),
+            "market_reason": mkt.get("reason") or "",
+            "price_source": "腾讯实时行情 + 新浪热备 / 东财 Push2 1分钟分时",
+            "cache_ttl_sec": 15 if mkt.get("trading") else 60,
+        }
+    return d
+
+
+def _live_sim_ttl() -> float:
+    try:
+        return 15.0 if market_clock.is_trading("CN") else 60.0
+    except Exception:  # noqa: BLE001
+        return 30.0
+
+
 @app.get("/api/live-sim")
 def api_live_sim() -> Response:
     """B1 实时模拟账本：二板涨停瞬间排板 → 按 11-25 两路径卖点规则卖出。"""
-    return api_guard(lambda: cached_copy("live_sim", 60.0, live_sim.sync))
+    return api_guard(lambda: cached_copy("live_sim", _live_sim_ttl(), _live_sim_enriched))
+
+
+@app.get("/api/evolution")
+def api_evolution() -> Response:
+    """蚁群信息素路径权重 + 非对称奖惩反馈 + 影子账本对照（只读，不改生产账本）。"""
+    return api_guard(lambda: cached_copy("evolution", 60.0, evolution.snapshot))
 
 
 @app.get("/api/guitu")
@@ -333,7 +371,9 @@ def api_ice_samples() -> Response:
 def api_refresh() -> Response:
     clear_cache()
     try:
-        live_sim.sync()
+        val = _live_sim_enriched()
+        with _lock:
+            _cache["live_sim"] = (time.time(), val)
     except Exception:  # noqa: BLE001
         pass
     return json_ok({"ok": True, "refreshed_at": datetime.now().isoformat(timespec="seconds")})
@@ -341,32 +381,54 @@ def api_refresh() -> Response:
 
 @app.get("/api/stream")
 def api_stream() -> Response:
-    """轻量 SSE：每 30 秒推送一次今日开仓状态，前端可降级为轮询。"""
+    """交易日实时 SSE 推送：交易时段每 15 秒推送最新状态心跳，非交易时段每 45 秒。"""
     def _gen():
         while True:
+            trading = False
             try:
-                d = cached_copy("live_sim_sse", 25.0, live_sim.sync)
+                trading = bool(market_clock.is_trading("CN"))
+                d = cached_copy("live_sim", _live_sim_ttl(), _live_sim_enriched)
                 brief = {
                     "day": d.get("day"),
                     "n_today": d.get("n_today"),
+                    "n_filled_today": d.get("n_filled_today"),
                     "n_holding": d.get("n_holding"),
                     "no_orders": d.get("no_orders"),
+                    "frames": d.get("frames"),
+                    "trading": trading,
                     "generated_at": d.get("generated_at"),
+                    "server_time": datetime.now().isoformat(timespec="seconds"),
                 }
                 yield f"data: {json.dumps(brief, ensure_ascii=False)}\n\n"
             except Exception as exc:  # noqa: BLE001
                 yield f"data: {json.dumps({'error': str(exc)}, ensure_ascii=False)}\n\n"
-            time.sleep(30)
+            time.sleep(15 if trading else 45)
 
     return Response(_gen(), mimetype="text/event-stream",
                     headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 # ---------------------------------------------------------------------------
-# 启动：实时留档线程（pytest 下禁用）
+# 启动：实时留档线程 + 后台快照预热线程（pytest 下禁用）
 # ---------------------------------------------------------------------------
 def _under_pytest() -> bool:
     return "PYTEST_CURRENT_TEST" in os.environ or "pytest" in os.environ.get("_", "")
+
+
+def _warm_loop() -> None:
+    """后台预热 live_sim 内存快照，让前端请求直接命中内存（<10ms 响应）。"""
+    while True:
+        try:
+            val = _live_sim_enriched()
+            with _lock:
+                _cache["live_sim"] = (time.time(), val)
+        except Exception:  # noqa: BLE001
+            pass
+        try:
+            interval = 20.0 if market_clock.is_trading("CN") else 60.0
+        except Exception:  # noqa: BLE001
+            interval = 45.0
+        time.sleep(interval)
 
 
 def _start_recorder() -> None:
@@ -376,6 +438,11 @@ def _start_recorder() -> None:
         recorder.start()
     except Exception as exc:  # noqa: BLE001
         print(f"[wukong] recorder 未启动: {type(exc).__name__}: {exc}", flush=True)
+    try:
+        t = threading.Thread(target=_warm_loop, name="wukong-warm", daemon=True)
+        t.start()
+    except Exception:  # noqa: BLE001
+        pass
 
 
 _start_recorder()

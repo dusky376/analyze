@@ -60,8 +60,25 @@ def _quote_age_sec(qt: Any, now: datetime | None = None) -> float | None:
     return max(0.0, (now - t).total_seconds())
 
 
+def _extract_quote_dict(code: str,
+                        quotes: pl.DataFrame | dict[str, Any] | None = None) -> dict[str, Any] | None:
+    """提取单股行情字典；未传入时走单股快查 feeds.single_quote（~50ms），绝不重拉全市场 5580 只。"""
+    c = str(code).zfill(6)
+    if isinstance(quotes, dict):
+        if "price" in quotes and str(quotes.get("ts_code") or c).zfill(6) == c:
+            return quotes
+        hit = quotes.get(c)
+        return hit if isinstance(hit, dict) else None
+    if isinstance(quotes, pl.DataFrame) and quotes.height > 0:
+        r = quotes.filter(pl.col("ts_code") == c)
+        if r.height > 0:
+            return r.to_dicts()[0]
+        return None
+    return feeds.single_quote(c, ttl=5.0)
+
+
 def _live_bar_for(code: str,
-                  quotes: pl.DataFrame | None = None) -> dict[str, Any] | None:
+                  quotes: pl.DataFrame | dict[str, Any] | None = None) -> dict[str, Any] | None:
     """当日实时 bar（只读内存合成，不写盘）。
 
     用户 2026-11-25 裁定后：**只要行情快照是今天的**就合成当日 bar，
@@ -69,13 +86,9 @@ def _live_bar_for(code: str,
     `live=True` 仅表示快照足够新（≤3 分钟）；午休时仍显示今天，但标 as_of。
     """
     try:
-        q = quotes if quotes is not None else feeds.all_quotes(force=True)
-        if q is None or q.height == 0:
+        d = _extract_quote_dict(code, quotes=quotes)
+        if not d:
             return None
-        r = q.filter(pl.col("ts_code") == str(code).zfill(6))
-        if r.height == 0:
-            return None
-        d = r.to_dicts()[0]
         qt = str(d.get("quote_time") or "")
         today = _cn_today()
         if qt[:8] != today:
@@ -96,8 +109,9 @@ def _live_bar_for(code: str,
             "pct": float(d["pct"]) if d.get("pct") is not None else None,
             "prev_close": float(d["prev_close"]) if d.get("prev_close") else None,
             "live": bool(age is not None and age <= LIVE_STALE_SEC),
+            "age_sec": round(age, 1) if age is not None else None,
             "as_of": snap,
-            "source": "live_quotes",
+            "source": f"live_{d.get('feed_source') or 'quotes'}",
         }
     except Exception:  # noqa: BLE001 - 盘中合成失败不影响已有日线
         return None
@@ -251,65 +265,130 @@ def _archive_points(code: str, day: str) -> tuple[list[dict[str, Any]], str]:
     return points, d
 
 
+def _trade_markers(code: str) -> list[dict[str, Any]]:
+    """只读提取该股在模拟账本里的买卖点标记，供 K 线图叠加核对。"""
+    import json
+    c = str(code).zfill(6)
+    markers: list[dict[str, Any]] = []
+    try:
+        from backend import live_sim
+        sf = getattr(live_sim, "STATE_FILE", paths.data_dir() / "paper" / "sim_state.json")
+        if not Path(sf).is_file():
+            return []
+        st = json.loads(Path(sf).read_text(encoding="utf-8"))
+        for p in (st.get("positions") or []) + (st.get("trades") or []):
+            if str(p.get("ts_code") or "").zfill(6) != c:
+                continue
+            ed = str(p.get("entry_date") or "")
+            if len(ed) == 8:
+                ed = f"{ed[:4]}-{ed[4:6]}-{ed[6:]}"
+            ep = p.get("entry_price")
+            if ed and ep:
+                markers.append({
+                    "kind": "buy",
+                    "date": ed[:10],
+                    "price": float(ep),
+                    "label": "买",
+                })
+            xd = str(p.get("exit_date") or "")
+            if len(xd) == 8:
+                xd = f"{xd[:4]}-{xd[4:6]}-{xd[6:]}"
+            xp = p.get("exit_price")
+            if xd and xp:
+                markers.append({
+                    "kind": "sell",
+                    "date": xd[:10],
+                    "price": float(xp),
+                    "label": "卖",
+                    "reason": str(p.get("exit_reason") or ""),
+                })
+    except Exception:  # noqa: BLE001
+        return []
+    # 去重（positions 和 trades 可能重叠已平仓记录）
+    seen: set[tuple[str, str, float]] = set()
+    uniq: list[dict[str, Any]] = []
+    for m in markers:
+        key = (m["kind"], m["date"], round(m["price"], 4))
+        if key not in seen:
+            seen.add(key)
+            uniq.append(m)
+    return uniq
+
+
 def intraday(code: str, day: str | None = None, *,
-             quotes: pl.DataFrame | None = None) -> dict[str, Any]:
+             quotes: pl.DataFrame | dict[str, Any] | None = None) -> dict[str, Any]:
     """当日分时。
 
     优先级（2026-11-25 用户裁定「要当天实时分时图」）：
-      1. 目标日 == 今天 → 腾讯 1 分钟分时（``minute_flow.live_series``，8 秒 TTL）；
-      2. 目标日 == 今天但接口失败 → 当日 quotes 留档快照（5 分钟一点）；
-      3. 历史日 → quotes 留档快照。
-
-    Returns:
-        {"available", "code", "day", "points": [{"t","price"}], "prev_close",
-         "granularity", "source", "live", "as_of", "note"}
+      1. 目标日 == 今天 → 东财 Push2 1 分钟（含真实 VWAP 均价线+量能）/ 腾讯 1 分钟（8 秒 TTL）；
+      2. 目标日 == 今天但接口失败 → 已落盘 1 分钟 / quotes 5 分钟留档；
+      3. 历史日 → 已落盘 1 分钟优先，其次 quotes 5 分钟留档。
     """
     c = str(code).zfill(6)
     today8 = _cn_today()
     if not day:
-        # 有今天的分钟数据就用今天；否则找最近有 quotes 留档的交易日。
         dirs = sorted((x.name for x in LIVE.iterdir()
                        if x.is_dir() and x.name.isdigit()
-                       and (x / "quotes").is_dir()), reverse=True)
-        day = today8 if today8 in dirs else (dirs[0] if dirs else None)
-        if day is None:
-            return {"available": False, "code": c, "reason": "无分时留档",
-                    "points": []}
+                       and (x / "quotes").is_dir()), reverse=True) if LIVE.is_dir() else []
+        day = today8 if today8 in dirs else (dirs[0] if dirs else today8)
     d = _compact(day)
     is_today = d == today8
 
     points: list[dict[str, Any]] = []
     source = "quotes_archive"
     granularity = "5min"
+    prev_close_from_min: float | None = None
     if is_today:
         try:
             from backend import minute_flow
-            got = minute_flow.live_series(c, d)
+            got = minute_flow.live_series(c, d, persist=True)
             if got:
-                points = [{"t": p["t"], "price": p["price"]} for p in got]
-                source = "tencent_1min"
+                points = [{
+                    "t": p["t"],
+                    "price": p["price"],
+                    "avg_price": p.get("avg_price"),
+                    "volume": p.get("volume"),
+                    "amount": p.get("amount"),
+                } for p in got]
+                source = str(got[0].get("source") or "eastmoney_1min")
                 granularity = "1min"
+                prev_close_from_min = got[0].get("prev_close")
         except Exception:  # noqa: BLE001 - 接口失败落回留档快照
+            points = []
+    else:
+        try:
+            from backend import minute_flow
+            got = minute_flow.load_persisted_minute(c, d)
+            if got:
+                points = [{
+                    "t": p["t"],
+                    "price": p["price"],
+                    "avg_price": p.get("avg_price"),
+                    "volume": p.get("volume"),
+                    "amount": p.get("amount"),
+                } for p in got]
+                source = str(got[0].get("source") or "minute_archive")
+                granularity = "1min"
+        except Exception:  # noqa: BLE001
             points = []
 
     if not points:
         points, d = _archive_points(c, d)
         if not points and is_today:
-            # 今天还没有行情帧（如 09:15 前）→ 明确说没有，不画昨天的冒充今天
             return {"available": False, "code": c, "day": f"{d[:4]}-{d[4:6]}-{d[6:]}",
                     "reason": f"{d} 尚无分时数据（盘前或采集未开始）",
                     "points": [], "granularity": granularity, "source": source}
 
-    # 昨收：优先实时行情（最可靠），其次留档帧里的 prev_close
+    # 昨收：优先实时单股行情（~50ms），其次分时接口，再其次留档帧里的 prev_close
     prev_close = None
     try:
-        q = quotes if quotes is not None else feeds.all_quotes(force=True)
-        r = q.filter(pl.col("ts_code") == c)
-        if r.height:
-            pc = r["prev_close"][0]
-            prev_close = float(pc) if pc else None
+        qd = _extract_quote_dict(c, quotes=quotes)
+        if qd and qd.get("prev_close"):
+            prev_close = float(qd["prev_close"])
     except Exception:  # noqa: BLE001
         prev_close = None
+    if prev_close is None and prev_close_from_min:
+        prev_close = float(prev_close_from_min)
     if prev_close is None:
         prev_close = next((p["prev_close"] for p in points
                            if p.get("prev_close") and p["prev_close"] > 0), None)
@@ -322,16 +401,16 @@ def intraday(code: str, day: str | None = None, *,
             now_hm = datetime.now().strftime("%H:%M")
             hh, mm = (int(x) for x in last_t[:5].split(":"))
             nhh, nmm = (int(x) for x in now_hm.split(":"))
-            fresh = (nhh * 60 + nmm) - (hh * 60 + mm) <= 5
+            fresh = abs((nhh * 60 + nmm) - (hh * 60 + mm)) <= 5
         except Exception:  # noqa: BLE001
             fresh = False
 
-    if source == "tencent_1min":
-        note = ("腾讯 1 分钟分时（盘中实时，约 8 秒刷新）；"
-                "价格为该分钟最后成交价。")
+    if source == "eastmoney_1min":
+        note = "东方财富 Push2 1 分钟真实分时（含均价线 VWAP + 成交量，约 8 秒刷新）。"
+    elif source == "tencent_1min":
+        note = "腾讯 1 分钟分时（盘中实时，约 8 秒刷新）；价格为该分钟最后成交价。"
     else:
-        note = (f"当日 {len(points)} 个 5 分钟留档快照点；"
-                "非逐笔，连线只示趋势。")
+        note = f"当日 {len(points)} 个 {granularity} 留档点；非逐笔，连线只示趋势。"
 
     return {
         "available": bool(points),
@@ -340,7 +419,8 @@ def intraday(code: str, day: str | None = None, *,
         "points": points,
         "n": len(points),
         "prev_close": prev_close,
-        "live": bool(is_today and fresh and source == "tencent_1min"),
+        "has_vwap": any(p.get("avg_price") for p in points),
+        "live": bool(is_today and fresh and granularity == "1min"),
         "as_of": last_t,
         "source": source,
         "granularity": granularity,
@@ -350,25 +430,25 @@ def intraday(code: str, day: str | None = None, *,
 
 def stock_chart(code: str, *, day: str | None = None,
                 kdays: int = 40) -> dict[str, Any]:
-    """K 线 + 分时合并输出（前端一次请求就能画两图）。"""
-    # 一次请求只拉一次全市场快照，K 线与分时共用（否则 5580 行拉两遍）
+    """K 线 + 分时 + 买卖点标记合并输出（单股快查，不拉全市场 5580 只）。"""
+    c = str(code).zfill(6)
     try:
-        q = feeds.all_quotes(force=True)
+        q = feeds.single_quote(c, ttl=5.0)
     except Exception:  # noqa: BLE001
         q = None
-    k = kline(code, days=kdays, quotes=q)
-    i = intraday(code, day=day, quotes=q)
+    k = kline(c, days=kdays, quotes=q)
+    i = intraday(c, day=day, quotes=q)
     return {
         "available": k["available"] or i["available"],
-        "code": str(code).zfill(6),
+        "code": c,
         "kline": k,
         "intraday": i,
+        "markers": _trade_markers(c),
         "generated_at": datetime.now().isoformat(timespec="seconds"),
     }
 
 
 if __name__ == "__main__":
-    import json
     import sys
     code = sys.argv[1] if len(sys.argv) > 1 else "002931"
     day = sys.argv[2] if len(sys.argv) > 2 else None

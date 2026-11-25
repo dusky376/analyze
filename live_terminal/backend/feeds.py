@@ -156,6 +156,147 @@ def _tx_get(symbols: Iterable[str], timeout: float = 8.0) -> list[dict[str, Any]
     return out
 
 
+SINA_URL = "https://hq.sinajs.cn/list="
+_SINA_UA = {
+    "User-Agent": _UA["User-Agent"],
+    "Referer": "https://finance.sina.com.cn/",
+}
+
+
+def _parse_sina_line(line: str) -> dict[str, Any] | None:
+    """解析新浪实时行情行（作为腾讯 WAF/超时时的真实热备源）。"""
+    if '="' not in line:
+        return None
+    left, right = line.split('="', 1)
+    body = right.rsplit('"', 1)[0]
+    if not body:
+        return None
+    sym = left.rsplit("_", 1)[-1].strip()
+    code = sym[2:] if len(sym) >= 8 else sym
+    p = body.split(",")
+    if len(p) < 32:
+        return None
+    try:
+        price = float(p[3])
+        prev_close = float(p[2])
+        op = float(p[1])
+        high = float(p[4])
+        low = float(p[5])
+        vol_shares = float(p[8])
+        amt = float(p[9])
+        bid1_vol = float(p[10]) / 100.0
+        bid1 = float(p[11])
+        ask1_vol = float(p[20]) / 100.0
+        ask1 = float(p[21])
+    except (TypeError, ValueError, IndexError):
+        return None
+    if price <= 0:
+        return None
+    pct = round((price - prev_close) / prev_close * 100.0, 2) if prev_close > 0 else None
+    qt_date = str(p[30]).replace("-", "")
+    qt_time = str(p[31]).replace(":", "")
+    qt = f"{qt_date}{qt_time}" if len(qt_date) == 8 and len(qt_time) == 6 else ""
+    return {
+        "ts_code": str(code).zfill(6),
+        "name": p[0],
+        "price": price,
+        "prev_close": prev_close if prev_close > 0 else None,
+        "open": op if op > 0 else None,
+        "volume": vol_shares / 100.0,
+        "amount": amt,
+        "high": high if high > 0 else price,
+        "low": low if low > 0 else price,
+        "pct": pct,
+        "change": round(price - prev_close, 4) if prev_close > 0 else None,
+        "turnover": None,
+        "float_mv": 0.0,
+        "total_mv": 0.0,
+        "limit_up": None,
+        "limit_down": None,
+        "bid1": bid1,
+        "bid1_vol": bid1_vol,
+        "ask1": ask1,
+        "ask1_vol": ask1_vol,
+        "quote_time": qt,
+        "feed_source": "sina",
+    }
+
+
+def _sina_get(symbols: Iterable[str], timeout: float = 6.0) -> list[dict[str, Any]]:
+    syms = [s for s in symbols if s]
+    if not syms:
+        return []
+    r = requests.get(SINA_URL + ",".join(syms), timeout=timeout, headers=_SINA_UA)
+    r.encoding = "gbk"
+    out: list[dict[str, Any]] = []
+    for line in r.text.splitlines():
+        v = _parse_sina_line(line)
+        if v:
+            out.append(v)
+    return out
+
+
+def batch_quotes(codes: Iterable[str], *, ttl: float = 5.0,
+                 force: bool = False) -> dict[str, dict[str, Any]]:
+    """重点池小批量实时行情（≤180 只单次 HTTP，~50ms；腾讯主源 + 新浪热备）。
+
+    用于持仓股/候选股/个股图表实时刷新，避免调用 all_quotes() 拉取全市场 5580 只。
+    """
+    norm = sorted({str(c).strip().zfill(6) for c in codes if str(c).strip()})
+    if not norm:
+        return {}
+    key = "batch_" + ",".join(norm)
+    if force:
+        with _lock:
+            _cache.pop(key, None)
+
+    def _fetch() -> dict[str, dict[str, Any]]:
+        out: dict[str, dict[str, Any]] = {}
+        for i in range(0, len(norm), TX_BATCH):
+            chunk = norm[i:i + TX_BATCH]
+            syms = [tx_symbol(c) for c in chunk]
+            rows: list[dict[str, Any]] = []
+            try:
+                rows = _tx_get(syms, timeout=5.0)
+                for row in rows:
+                    row.setdefault("feed_source", "tencent")
+            except Exception:  # noqa: BLE001
+                rows = []
+            got_codes = {str(r["ts_code"]).zfill(6) for r in rows}
+            missing = [c for c in chunk if c not in got_codes]
+            if missing:
+                try:
+                    # 腾讯缺失或 501 限流时自动切新浪真实行情热备
+                    sina_rows = _sina_get([tx_symbol(c) for c in missing], timeout=5.0)
+                    rows.extend(sina_rows)
+                except Exception:  # noqa: BLE001
+                    pass
+            for r in rows:
+                out[str(r["ts_code"]).zfill(6)] = r
+        return out
+
+    return _cached(key, ttl, _fetch)
+
+
+def single_quote(code: str, *, ttl: float = 5.0,
+                 force: bool = False) -> dict[str, Any] | None:
+    """单只股票实时行情（~50ms；腾讯主源 + 新浪热备）。"""
+    c = str(code).strip().zfill(6)
+    if not c.isdigit():
+        return None
+    got = batch_quotes([c], ttl=ttl, force=force)
+    return got.get(c)
+
+
+def clear_caches() -> None:
+    """清空 feeds 全部内存缓存（供 /api/refresh 调用）。"""
+    global _panel_mem, _CAL_DAYS
+    with _lock:
+        _cache.clear()
+        _panel_mem = None
+        _CAL_DAYS = None
+
+
 def stock_list() -> pl.DataFrame:
     """项目缓存里的全市场清单（5,580 只）。"""
     f = PROJECT_CACHE / "meta" / "stock_list.parquet"
