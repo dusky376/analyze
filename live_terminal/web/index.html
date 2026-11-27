@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>悟空真经 · 二板排板终端</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/style.css?v=__APP_VER__">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="seal">悟</div>
+    <div>
+      <h1>悟空真经</h1>
+      <p class="sub">E5:B1 · A股二板模拟验证终端</p>
+    </div>
+  </div>
+  <nav class="tabs" role="tablist">
+    <div class="tab-indicator" id="tabIndicator" aria-hidden="true"></div>
+    <button class="tab-btn active" data-tab="today" type="button">今日作战台</button>
+    <button class="tab-btn" data-tab="book" type="button">持仓与账本</button>
+    <button class="tab-btn" data-tab="evo" type="button">进化与回放</button>
+  </nav>
+  <div class="top-right">
+    <span class="pill" id="dayPill">--</span>
+    <span class="pill" id="marketPill">--</span>
+    <span class="pill dot" id="healthPill">检查中</span>
+    <span class="pill dot" id="ssePill" title="交易日实时推送连接状态">实时连接</span>
+    <button id="refreshBtn" type="button">刷新</button>
+  </div>
+</header>
+
+<main>
+  <!-- 独立数据新鲜度与真实性透明条（永不被策略空仓文案覆盖） -->
+  <div class="freshness-bar" id="freshnessBar">
+    <span id="freshSource">数据源：真实落盘 + 腾讯/新浪实时行情 + 东财 1 分钟分时</span>
+    <span class="sep">·</span>
+    <span id="freshPanel">日线面板：--</span>
+    <span class="sep">·</span>
+    <span id="freshLive">留档最新：--</span>
+    <span class="sep">·</span>
+    <span id="freshSync">账本同步：--</span>
+  </div>
+
+  <!-- 数据健康告警条（仅展示缺失/断更/过期报警） -->
+  <div class="notice warn hidden" id="healthNotice"></div>
+  <!-- 全市场重磅政策爆发 / 宽基突拉强预警横幅 -->
+  <div class="macro-alert-banner hidden" id="macroAlertBanner"></div>
+  <!-- 策略状态提示条（空仓原因/闸门拦截） -->
+  <div class="notice hidden" id="strategyNotice"></div>
+
+  <!-- ==================== TAB 1: 今日作战台 ==================== -->
+  <div class="tab-pane active" id="pane-today">
+    <section class="hero spotlight reveal" style="--d:0ms">
+      <div class="hero-main">
+        <p class="eyebrow">今日交易状态 · 模拟盘验证</p>
+        <h2 id="heroTitle">载入中…</h2>
+        <p id="heroReason" class="muted">正在读取真实涨停池留档与行情快照。</p>
+        <details class="rules-details">
+          <summary>策略口径速览（买点 / 卖点 / 核心）</summary>
+          <div class="rules" id="rules"></div>
+        </details>
+      </div>
+      <div class="kpis">
+        <div class="kpi spotlight"><span>今日委托</span><strong id="kToday">--</strong><small>二板排板单</small></div>
+        <div class="kpi spotlight"><span>已成交</span><strong id="kFilled">--</strong><small>Q037 撮合</small></div>
+        <div class="kpi spotlight"><span>当前持仓</span><strong id="kHolding">--</strong><small>跨日持有</small></div>
+        <div class="kpi spotlight"><span>龟兔配对</span><strong id="kPairs">--</strong><small>同题材同身位</small></div>
+      </div>
+    </section>
+
+    <section class="panel spotlight reveal" id="emotion" style="--d:80ms">
+      <div class="panel-head">
+        <h2>大盘情绪、市场冰点与外盘风偏</h2>
+        <p class="muted">市场冰点（定基础仓位）× 外盘日韩美股风偏（前置风险系数）× 个股情绪闸门（决定今日能否打板）</p>
+      </div>
+      <div class="grid-3">
+        <div class="env-group spotlight" id="iceBox">
+          <h4>市场冰点 · 仓位档位</h4>
+          <div class="empty-card">载入中…</div>
+        </div>
+        <div class="env-group spotlight" id="emotionBox">
+          <h4>个股情绪 · 打板闸门</h4>
+          <div class="empty-card">载入中…</div>
+        </div>
+        <div class="env-group spotlight" id="overseasBox">
+          <h4>外盘风偏 · 日韩美股 / A50</h4>
+          <div class="empty-card">载入中…</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel spotlight reveal" id="macroIntel" style="--d:130ms">
+      <div class="panel-head">
+        <h2>全球映射与国内重点快讯</h2>
+        <p class="muted" id="macroMeta">美股核心龙头映射 A 股板块 · 同花顺/东财 7×24 政策催化与个股雷区预警</p>
+      </div>
+      <div class="grid-3">
+        <div class="env-group spotlight" id="catalystBox">
+          <h4>美股映射与国内题材催化</h4>
+          <div class="empty-card">正在读取外盘龙头与国内政策映射…</div>
+        </div>
+        <div class="env-group spotlight" id="lhbBox">
+          <h4>昨日龙虎榜 · 游资主攻方向</h4>
+          <div class="empty-card">正在读取昨日龙虎榜游资活人情绪…</div>
+        </div>
+        <div class="env-group spotlight" id="newsBox">
+          <h4>7×24 高信噪比快讯与雷区预警</h4>
+          <div class="empty-card">正在读取实时政策快讯…</div>
+        </div>
+      </div>
+    </section>
+
+    <section id="today" class="panel spotlight reveal" style="--d:190ms">
+      <div class="panel-head">
+        <h2>今日二板 · 排板委托与买点质量</h2>
+        <p class="muted" id="todayMeta">--</p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>代码 / 名称</th>
+            <th>题材</th>
+            <th>龟兔角色</th>
+            <th class="num" title="综合兔子共振、首封时间、炸板次数、换手率与封单失血预警（0-100分）">买点质量</th>
+            <th>挂单时刻</th>
+            <th class="num">委托价</th>
+            <th class="num">数量</th>
+            <th class="num" title="本笔预算 = 100万×10%×冰点系数">预算</th>
+            <th class="num" title="持有价值 = 实时价×数量；括号为实时浮盈（红涨绿跌）">持有价值</th>
+            <th>状态</th>
+            <th>成交 / 原因</th>
+          </tr></thead>
+          <tbody id="todayBody"><tr><td colspan="11" class="empty">载入中…</td></tr></tbody>
+        </table>
+      </div>
+      <p class="hint">点击任意股票行，直接在下方展开高清交互式 K 线 / 1 分钟分时（含均价线 VWAP、成交量、买卖点标记与十字光标）</p>
+      <div class="grid-2" id="rabbitStatesWrap"></div>
+      <div class="grid-2" id="pairsWrap"></div>
+      <div id="t1RelayWrap"></div>
+      <div id="skippedWrap"></div>
+    </section>
+  </div>
+
+  <!-- ==================== TAB 2: 持仓与账本 ==================== -->
+  <div class="tab-pane" id="pane-book">
+    <section id="book" class="panel spotlight reveal" style="--d:0ms">
+      <div class="panel-head">
+        <h2>B1 实时模拟账本 · 每日买卖验证</h2>
+        <p class="muted">两路径自适应卖点（炸板未回封→次日10:00前；封住→断板日收盘前；盘中急跌/冲高回落优先）。纯模拟，不发券商指令。</p>
+      </div>
+      <div class="summary-row" id="accountSummary"></div>
+      <div class="cap-bar-wrap hidden" id="capBarWrap">
+        <div class="cap-bar-head">
+          <span>仓位占用（总仓上限 80%）</span>
+          <span id="capBarText">--</span>
+        </div>
+        <div class="cap-bar"><div class="cap-bar-fill" id="capBarFill" style="width:0%"></div></div>
+      </div>
+      <div class="summary-row" id="costSummary"></div>
+
+      <div class="filter-bar">
+        <div class="filter-group" id="posFilters">
+          <button class="filter-btn active" data-filter="all" type="button">全部记录</button>
+          <button class="filter-btn" data-filter="holding" type="button">仅看持仓中</button>
+          <button class="filter-btn" data-filter="closed" type="button">仅看已结算</button>
+        </div>
+        <span class="muted" id="posCountMeta">点击任意行查看该股 K 线与买卖点标注</span>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>代码 / 名称</th>
+            <th>买入日</th>
+            <th>状态</th>
+            <th class="num">买入价</th>
+            <th class="num">卖出日</th>
+            <th class="num">卖出价</th>
+            <th class="num">毛收益</th>
+            <th class="num">净收益</th>
+          </tr></thead>
+          <tbody id="posBody"><tr><td colspan="8" class="empty">载入中…</td></tr></tbody>
+        </table>
+      </div>
+
+      <h3 class="sub-head">净收益统计（万0.84免五 · 单一口径）</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>成本口径</th><th class="num">样本</th><th class="num">胜率</th><th class="num">均值净</th><th class="num">中位净</th></tr></thead>
+          <tbody id="costBody"></tbody>
+        </table>
+      </div>
+
+      <details class="caveats" id="exitAltDetails">
+        <summary>展开卖法对照研究（现行卖法 vs 固定止盈止损 · 按需加载，不拖慢首屏）</summary>
+        <p class="muted" id="exitAltMeta" style="margin:10px 0 8px">展开后加载…</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr>
+              <th>代码 / 名称</th><th class="num">现行毛收益</th><th class="num">固定止损模拟</th>
+              <th class="num">差异</th><th>当时环境（情绪 / 高标 / 断板）</th><th>模拟卖点</th>
+            </tr></thead>
+            <tbody id="exitAltBody"><tr><td colspan="6" class="empty">待加载…</td></tr></tbody>
+          </table>
+        </div>
+        <div id="exitEnvGroups" class="env-groups"></div>
+        <ul id="exitAltCaveats"></ul>
+      </details>
+    </section>
+  </div>
+
+  <!-- ==================== TAB 3: 进化与回放 ==================== -->
+  <div class="tab-pane" id="pane-evo">
+    <section id="evolution" class="panel spotlight reveal" style="--d:0ms">
+      <div class="panel-head">
+        <h2>信息素路径权重与奖惩自进化（影子对照）</h2>
+        <p class="muted" id="evoMeta">严格因果更新 · 每日自然挥发 3% · 跌停核按钮 2× 重罚</p>
+      </div>
+      <div class="summary-row" id="evoSummary"></div>
+      <div class="advice-list" id="evoAdvice"></div>
+      <div id="fillCatWrap"></div>
+      <div id="cancelCfWrap"></div>
+
+      <h3 class="sub-head">路径信息素排行榜（板块无关：共振锚定 × 首封 × 换手 × 开板 · 含无题材市场自选侦察）</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>路径特征</th>
+            <th class="num">信息素 τ</th>
+            <th class="num">建议仓位系数</th>
+            <th class="num">样本</th>
+            <th class="num">胜率</th>
+            <th class="num">核按钮</th>
+            <th>演化趋势</th>
+          </tr></thead>
+          <tbody id="evoPathsBody"><tr><td colspan="7" class="empty">切入本页后自动计算…</td></tr></tbody>
+        </table>
+      </div>
+
+      <h3 class="sub-head" id="evoFactorsHead">12 因子独立信息素画像（竞价 / 上板 / 换手 / 封板质量 / 股性基因 / 60日突破 / 题材锚定 / 板块梯队 / 高标存亡 / 昨日溢价 / 龙虎榜 / 外盘催化 · 小样本收缩）</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>因子维度</th>
+            <th>因子分桶</th>
+            <th class="num">原始 τ</th>
+            <th class="num">收缩后系数</th>
+            <th class="num">样本</th>
+            <th class="num">胜率</th>
+            <th class="num">均值收益</th>
+            <th>趋势</th>
+          </tr></thead>
+          <tbody id="evoFactorsBody"><tr><td colspan="8" class="empty">切入本页后自动计算…</td></tr></tbody>
+        </table>
+      </div>
+
+      <h3 class="sub-head">近期奖惩反馈日志（真实结算因果更新）</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>结算日</th><th>股票</th><th>路径</th>
+            <th class="num">真实收益</th><th class="num">奖惩值</th>
+            <th class="num">τ 变化</th><th>说明</th>
+          </tr></thead>
+          <tbody id="evoLogBody"><tr><td colspan="7" class="empty">暂无反馈记录</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="missedReflection" class="panel spotlight reveal" style="--d:60ms">
+      <div class="panel-head">
+        <h2>漏网强势股反思与候选因子验证（反事实归因）</h2>
+        <p class="muted" id="missMeta">扫描全市场未命中但走出大行情的二板：归因漏网原因 · 正负样本对撞防过拟合 · 主线热度反哺因子</p>
+      </div>
+      <div class="summary-row" id="missSummary"></div>
+      <div class="advice-list" id="missHeatList"></div>
+
+      <h3 class="sub-head">候选因子正负样本对撞（避免因踏空盲目放宽规则）</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>候选因子反思</th>
+            <th>触发条件</th>
+            <th class="num">全部触发</th>
+            <th class="num">捕获牛股</th>
+            <th class="num">带入亏钱</th>
+            <th class="num">胜率</th>
+            <th class="num">断板均值</th>
+            <th>判定建议</th>
+          </tr></thead>
+          <tbody id="missPropBody"><tr><td colspan="8" class="empty">切入本页后自动计算…</td></tr></tbody>
+        </table>
+      </div>
+
+      <h3 class="sub-head">近期漏网二板强势股明细（点击行查看 K 线）</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>二板日</th><th>股票</th><th>题材</th>
+            <th class="num">二板换手</th><th class="num">高开</th>
+            <th class="num">最高连板</th><th class="num">5日最大涨</th>
+            <th>漏网归因</th>
+          </tr></thead>
+          <tbody id="missWinBody"><tr><td colspan="8" class="empty">暂无漏网记录</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="b2Challenger" class="panel spotlight reveal" style="--d:90ms">
+      <div class="panel-head">
+        <h2>B2 纯换手二板 · 影子挑战者（独立学习与毕业门禁）</h2>
+        <p class="muted" id="b2Meta">追踪无同题材一字兔的纯换手二板（关联产业链有兔 / 高标带动 / 一字首板带动），纯影子结算不触碰 B1 主仓</p>
+      </div>
+      <div class="summary-row" id="b2Summary"></div>
+      <div class="advice-list" id="b2GateNote"></div>
+
+      <h3 class="sub-head">纯换手子路径信息素榜（达标解锁 0.3× 卫星试错仓）</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>纯换手子路径（广义锚点 × 换手 × 形态）</th>
+            <th class="num">信息素 τ</th>
+            <th class="num">样本</th>
+            <th class="num">胜率</th>
+            <th class="num">断板净均</th>
+            <th class="num">核按钮</th>
+            <th>毕业判定 / 差距</th>
+          </tr></thead>
+          <tbody id="b2PathsBody"><tr><td colspan="7" class="empty">切入本页后自动计算…</td></tr></tbody>
+        </table>
+      </div>
+
+      <h3 class="sub-head">近期 B2 影子结算明细（点击行查看 K 线）</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>二板日</th><th>股票</th><th>题材 / 广义锚点</th>
+            <th class="num">换手</th><th class="num">最高连板</th>
+            <th>卖出日</th><th class="num">断板净收益</th>
+          </tr></thead>
+          <tbody id="b2TradesBody"><tr><td colspan="7" class="empty">暂无影子结算</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="backtest" class="panel spotlight reveal" style="--d:100ms">
+      <div class="panel-head">
+        <h2>二板排板 · 历史回放（只读参考）</h2>
+        <p class="muted" id="btMeta">--</p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>口径</th><th class="num">样本</th><th class="num">胜率</th><th class="num">均值净</th><th class="num">中位净</th><th class="num">10% 等权累计</th></tr></thead>
+          <tbody id="btStats"><tr><td colspan="6" class="empty">待加载…</td></tr></tbody>
+        </table>
+      </div>
+      <h3 class="sub-head">最近 20 个二板信号</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>信号日</th><th>代码 / 名称</th><th>题材</th><th class="num">二板高度</th><th class="num">持有</th><th class="num">最高连板</th><th class="num">净收益</th></tr></thead>
+          <tbody id="btLatest"></tbody>
+        </table>
+      </div>
+      <details class="caveats"><summary>回放口径与边界（必读）</summary><ul id="btCaveats"></ul></details>
+    </section>
+  </div>
+
+  <footer>
+    <p>悟空真经 · 二板排板终端 ｜ 全站红涨绿跌 ｜ 数据只读真实落盘与公开行情 ｜ 纯模拟验证，绝不向券商发单</p>
+    <p class="muted" id="footerMeta"></p>
+  </footer>
+</main>
+
+<script src="/app.js?v=__APP_VER__"></script>
+</body>
+</html>

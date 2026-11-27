@@ -1,0 +1,85 @@
+# 悟空真经 · 二板排板终端
+# 只保留源码 / 文档 / 小体积落盘数据；大文件与运行时产物不入库。
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.eggs/
+.venv/
+venv/
+.mypy_cache/
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# ---- 大文件 / 行情缓存 ----
+*.parquet
+*.duckdb
+*.duckdb.wal
+*.pkl
+*.zip
+*.log
+*.tmp
+*.bak
+*.bak-*
+*.old
+*.orig
+~$*
+*.swp
+*.swo
+
+# ---- IDE / OS ----
+.idea/
+.vscode/
+*.iml
+.DS_Store
+Thumbs.db
+desktop.ini
+.workbuddy/
+
+# ---- secrets / credentials ----
+**/secrets/
+**/.secrets/
+**/data/cache/
+*.secret.json
+**/*credential*.json
+**/*_credential*.json
+.env
+.env.*
+!.env.example
+
+# ---- runtime ----
+data/tmp/
+data/server.log
+data/server.err.log
+
+# ---- 运行期落盘账本 / 留档（本地数据，不入库） ----
+# 2026-11-25 数据与代码分离：数据根已从 live_terminal/data 迁到 <项目根>/data。
+# 保留旧规则仅为兼容历史 checkout（若有人还用旧布局也不会误入库）。
+live_terminal/data/live/
+live_terminal/data/paper/
+live_terminal/data/cache/
+live_terminal/data/market_cache/
+live_terminal/data/themes/
+live_terminal/data/guitu_sim.json
+live_terminal/data/leader_ladder.json
+live_terminal/data/weekly_review.json
+live_terminal/data/market_context.json
+live_terminal/data/intraday/
+
+# 新布局：整个数据目录不入库（只有 ice_samples.json 的人工种子例外）
+/data/*
+!/data/ice_samples.json
+
+# ---- 研究临时脚本/中间产物（结论已写进 md，脚本不入库） ----
+research_tmp/
+
+# 注：ice_samples.json **不忽略** ——
+# 其中 15 个人工 anchor 种子不可再生，必须随仓库保存；
+# 自动增长的 auto_samples 也一并入库，便于回溯与漂移审计。
+live_terminal/data/ice_samples.tmp.json
+data/ice_samples.tmp.json
